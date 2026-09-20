@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>操作卓 まちの水位スコープ</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700;900&family=Noto+Sans+JP:wght@400;700&display=swap">
+<style>
+  :root{--bg:#f2f4ee;--panel:#fff;--ink:#1c2733;--muted:#5b6770;--line:#d6dbd2;--accent:#1f6f8b;--warn:#e8912d;--danger:#c8352e}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans JP",system-ui,sans-serif;line-height:1.6}
+  .wrap{max-width:820px;margin:0 auto;padding:24px 16px 40px}
+  h1{font-family:"Zen Maru Gothic",sans-serif;font-size:28px;margin:6px 0}
+  .code{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin:14px 0}
+  .code b{font:900 44px "Zen Maru Gothic",sans-serif;letter-spacing:.15em;color:var(--accent)}
+  .status{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#9aa3a8;margin-right:6px}
+  .dot.on{background:#3aa657}
+  .msg{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin:12px 0}
+  .msg b{font:900 22px "Zen Maru Gothic",sans-serif;display:block}
+  .lv{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:12px 0}
+  .lv button{padding:24px 0;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:900 24px "Zen Maru Gothic",sans-serif;cursor:pointer}
+  .lv button small{display:block;font:600 11px "Noto Sans JP",sans-serif;color:var(--muted)}
+  .lv button[aria-pressed="true"]{background:var(--warn);border-color:var(--warn)}
+  .tl{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+  .tl button{padding:16px 10px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:700 15px "Noto Sans JP",sans-serif;cursor:pointer}
+  .tl button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .tl button.danger{border-color:var(--danger);color:var(--danger)}
+  .note{font-size:13px;color:var(--muted)}
+  kbd{font:600 12px ui-monospace,monospace;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;background:#e7ebe3}
+  @media (max-width:640px){.lv{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="note">大分地方気象台 お天気フェア ・ スタッフ用</div>
+  <h1>操作卓</h1>
+  <div class="code">
+    <span>操作コード</span><b id="code">----</b>
+    <span class="note">体験端末の開始画面で、このコードを入力して「ARをはじめる」。ネットにつながっていれば、この画面のボタンで体験端末が動きます。</span>
+  </div>
+  <div class="status"><span><span class="dot" id="dot"></span><span id="st">接続の準備中…</span></span><span>つながっている端末：<b id="n">0</b> 台</span></div>
+  <div class="msg"><span class="note">いま体験端末に出ている言葉</span><b id="mT">あめが ふりはじめた</b><span id="mS">マンホールと みぞ（側溝）が 見えているね</span></div>
+  <div class="lv" id="lv"></div>
+  <div class="tl">
+    <button id="car">🚗 車を走らせる（30cm未満は通過、30cm以上で停止）</button>
+    <button id="auto" aria-pressed="false">▶ 自動で上げる（7秒ごと）</button>
+    <button id="murk">水のにごり：自動（だんだん泥水）</button>
+    <button id="debris" aria-pressed="true">漂流物を流す</button>
+    <button id="reveal" aria-pressed="false">かくれた危険を見える化</button>
+    <button id="lock" aria-pressed="true">子どものタップを無効</button>
+    <button id="reset" class="danger">次の子に交代（0にもどす）</button>
+  </div>
+  <p class="note">キーボード：<kbd>1</kbd>〜<kbd>7</kbd> 水位、<kbd>→</kbd>／<kbd>Space</kbd>／<kbd>PageDown</kbd> 次、<kbd>←</kbd>／<kbd>PageUp</kbd> 前、<kbd>0</kbd>／<kbd>Home</kbd> 0に戻す、<kbd>C</kbd> 車、<kbd>B</kbd> 見える化、<kbd>A</kbd> 自動、<kbd>M</kbd> にごり切替。プレゼン用リモコンをこのPCにつないでも使えます。</p>
+  <p class="note">ネットが使えない会場では、リモコンを体験端末に直接ペアリングしてください（PageDown＝次の水位）。</p>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script>
+(() => {
+  const LEVELS = [0, 5, 10, 20, 30, 50, 70];
+  const MSG = {
+    0: ['あめが ふりはじめた', 'マンホールと みぞ（側溝）が 見えているね'],
+    5: ['みぞから 水が あふれてきた！', '下水道が いっぱいで 流しきれない。これが 内水氾濫'],
+    10: ['水の深さ 10cm', 'くつの中に 水が入る。車は ブレーキが ききにくい'],
+    20: ['水の深さ 20cm', 'マンホールも みぞも 見えない！ こどもは ひざ下'],
+    30: ['水の深さ 30cm', '車の エンジンが とまるかも。地下の かいだんは のぼれない'],
+    50: ['水の深さ 50cm', 'おとなも 歩くのが むずかしい。車が うき出す'],
+    70: ['水の深さ 70cm', '大人の男の人でも 歩けない。こうなる前に 高いところへ にげよう'],
+  };
+  const $ = id => document.getElementById(id);
+  const S = { level: 0, auto: false, reveal: false, lock: true, carEpoch: 0, autoT: 0, murk: 'auto', debris: true };
+  const MURK = { auto: '自動（だんだん泥水）', clear: '真水（透明）', mud: '泥水（にごり）' };
+  let code = localStorage.getItem('deskCode');
+  if (!code) { code = String(1000 + Math.floor(Math.random() * 9000)); localStorage.setItem('deskCode', code); }
+  $('code').textContent = code;
+
+  const conns = new Set();
+  let peer = null;
+  function open() {
+    if (typeof Peer === 'undefined') { $('st').textContent = '接続ライブラリを読み込めません（ネット接続を確認）'; return; }
+    peer = new Peer('floodscope-' + code);
+    peer.on('open', () => { $('dot').classList.add('on'); $('st').textContent = '接続OK（コード ' + code + '）'; });
+    peer.on('connection', c => {
+      conns.add(c); $('n').textContent = conns.size;
+      c.on('open', () => send(c));
+      c.on('close', () => { conns.delete(c); $('n').textContent = conns.size; });
+      c.on('error', () => { conns.delete(c); $('n').textContent = conns.size; });
+    });
+    peer.on('disconnected', () => { $('dot').classList.remove('on'); $('st').textContent = '再接続中…'; setTimeout(() => peer.reconnect(), 1500); });
+    peer.on('error', e => { $('dot').classList.remove('on'); $('st').textContent = '接続エラー：' + e.type; if (e.type === 'unavailable-id') { code = String(1000 + Math.floor(Math.random() * 9000)); localStorage.setItem('deskCode', code); $('code').textContent = code; setTimeout(open, 800); } });
+  }
+  open();
+  function state() { return { level: S.level, auto: S.auto, reveal: S.reveal, lock: S.lock, car: S.carEpoch, murk: S.murk, debris: S.debris, epoch: Date.now() }; }
+  function send(c) { const st = state(); if (c) { try { c.send(st); } catch (e) {} } else conns.forEach(x => { try { x.send(st); } catch (e) {} }); }
+  setInterval(() => send(), 3000);
+
+  LEVELS.forEach(l => { const b = document.createElement('button'); b.id = 'lv' + l; b.innerHTML = (l === 5 ? 'あふれ' : l) + '<small>' + (l === 0 ? 'なし' : l === 5 ? '側溝から' : 'cm') + '</small>'; b.addEventListener('click', () => { setAuto(false); setLevel(l); }); $('lv').appendChild(b); });
+  function setLevel(l) { S.level = l; S.autoT = 0; LEVELS.forEach(x => $('lv' + x).setAttribute('aria-pressed', String(x === l))); $('mT').textContent = MSG[l][0]; $('mS').textContent = MSG[l][1]; send(); }
+  function setAuto(on) { S.auto = on; S.autoT = 0; $('auto').setAttribute('aria-pressed', String(on)); send(); }
+  function setReveal(on) { S.reveal = on; $('reveal').setAttribute('aria-pressed', String(on)); send(); }
+  function next() { const i = LEVELS.indexOf(S.level); if (i < LEVELS.length - 1) setLevel(LEVELS[i + 1]); }
+  function prev() { const i = LEVELS.indexOf(S.level); if (i > 0) setLevel(LEVELS[i - 1]); }
+  $('car').addEventListener('click', () => { S.carEpoch = Date.now(); send(); });
+  $('auto').addEventListener('click', () => setAuto(!S.auto));
+  $('murk').addEventListener('click', () => { S.murk = S.murk === 'auto' ? 'clear' : S.murk === 'clear' ? 'mud' : 'auto'; $('murk').textContent = '水のにごり：' + MURK[S.murk]; send(); });
+  $('reveal').addEventListener('click', () => setReveal(!S.reveal));
+  $('debris').addEventListener('click', e => { S.debris = !S.debris; e.target.setAttribute('aria-pressed', String(S.debris)); send(); });
+  $('lock').addEventListener('click', e => { S.lock = !S.lock; e.target.setAttribute('aria-pressed', String(S.lock)); send(); });
+  $('reset').addEventListener('click', () => { setAuto(false); setReveal(false); setLevel(0); });
+  setInterval(() => { if (S.auto) { S.autoT += 1; if (S.autoT >= 7) { const i = LEVELS.indexOf(S.level); if (i < LEVELS.length - 1) setLevel(LEVELS[i + 1]); else setAuto(false); } } }, 1000);
+  window.addEventListener('keydown', e => {
+    const k = e.key; let hit = true;
+    if (k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'Enter') { setAuto(false); next(); }
+    else if (k === 'ArrowLeft' || k === 'PageUp') { setAuto(false); prev(); }
+    else if (k === 'Home' || k === '0') { setAuto(false); setReveal(false); setLevel(0); }
+    else if (k >= '1' && k <= '7') { setAuto(false); setLevel(LEVELS[+k - 1]); }
+    else if (k === 'c' || k === 'C') $('car').click();
+    else if (k === 'b' || k === 'B' || k === '.') setReveal(!S.reveal);
+    else if (k === 'a' || k === 'A') setAuto(!S.auto);
+    else if (k === 'm' || k === 'M') $('murk').click();
+    else hit = false;
+    if (hit) e.preventDefault();
+  });
+  setLevel(0);
+})();
+</script>
+</body>
+</html>

@@ -148,6 +148,7 @@
       <span><b>案内役メモ（スタッフ用）</b><small>5分の進め方、水位ごとの説明、機材、安全上の注意。</small></span>
     </button>
   </div>
+  <p class="code-row" style="margin-top:14px">スタッフの操作コード：<input type="text" id="deskCode" inputmode="numeric" maxlength="4" placeholder="4けた" style="font:700 20px 'Zen Maru Gothic',sans-serif;width:6em;padding:6px 10px;border:1px solid var(--line);border-radius:10px;letter-spacing:.15em"> <span class="note">（desk.html の数字。入れると体験画面のボタンが隠れ、スタッフのPCから操作できます）</span></p>
   <p class="note" style="margin-top:18px">センサー（ジャイロ）とカメラは、体験画面で「センサーON」を押すと使えるようになります。iPhoneは「動作と方向」の許可が出ます。</p>
 </section>
 
@@ -235,7 +236,7 @@
     <li><b>探り棒</b>：閉じたビニール傘の先にゴムキャップかテニスボール。予備を1本。</li>
     <li><b>ゴーグル端末</b>：充電、画面ロック解除、自動ロックをオフ、音量を上げ、このページを開いてログイン。「音」をON。「センサーON」を押して許可。</li>
     <li><b>コーンに合わせる</b>：スタートマットに立ち、通路の奥を向いて「コーンに合わせる」。通路の幅（1.2／1.5）と障害物の高さを選び、「いま向いている方向をまっすぐにする」→ 緑の線が本物のコーンに重なるまで「画角の広さ」「目の高さ」「前後」を調整。合ったら閉じる（設定はその端末に保存）。Android版は開始時に足元の床をタップするだけ。</li>
-    <li><b>操作卓</b>：スタッフPCで同じページの「操作卓」を開き、「連動 ON」と台数が出ることを確認。出なければBluetoothリモコンをゴーグル端末にペアリング（PageDownで次の水位）。</li>
+    <li><b>操作卓</b>：スタッフPCで desk.html を開くと4けたの操作コードが出る。体験端末のホームでそのコードを入れて体験を始めると、端末のボタンが隠れ、PCのボタンで水位・車・交代を操作できる（両方ネット接続が必要）。ネットが無い場合はBluetoothリモコンを体験端末にペアリング（PageDownで次の水位）。</li>
     <li><b>モニター</b>：ゴーグル端末の画面をAirPlay／Chromecastでモニターに映す（見学者用）。</li>
     <li><b>通し確認</b>：0→あふれ→10→20→30（車）→50→70→交代、を一度通す。段差・ミニコーンが順に見えなくなるか、車が左の車道に出るかを見る。</li>
   </ol>
@@ -272,6 +273,7 @@
       <button id="ctlEye" aria-pressed="false">目の高さ：こども</button>
       <button id="ctlCar">🚗 車を走らせる（30cmで止まる）</button>
       <button id="ctlStation" aria-pressed="false">ゴールで止まる（向きを反転）</button>
+      <button id="ctlMurk">水のにごり：自動</button>
       <button id="ctlReset" class="danger">次の子に交代（0cmにもどす）</button>
     </div>
     <p class="note">キーボードでも操作できます：<kbd>1</kbd>〜<kbd>7</kbd> 水位、<kbd>C</kbd> 車、<kbd>T</kbd> ゴール、<kbd>→</kbd>／<kbd>Space</kbd>／<kbd>PageDown</kbd> 次へ、<kbd>←</kbd>／<kbd>PageUp</kbd> 前へ、<kbd>0</kbd>／<kbd>Home</kbd> リセット、<kbd>B</kbd> 見える化、<kbd>A</kbd> 自動。Bluetoothのプレゼン用リモコンをこのPCか体験端末にペアリングすれば、そのボタン（PageUp/PageDown）でも動きます。</p>
@@ -313,6 +315,7 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script>
 /* =====================================================================
    まちの水位スコープ（共通版）  大分地方気象台 お天気フェア 内水氾濫体験
@@ -322,6 +325,7 @@
      - MSG    : 各段階で画面に出す言葉（t=見出し, s=説明）。半角スペースで改行位置を調整
      - COR    : 通路の寸法、コーンの高さ、側溝・車道の位置、障害物（赤ミニコーン）の位置と高さ
      - DEBRIS_KINDS : 流れてくるもの（bottle, bag, can, branch, bucket, foam）
+     - IMAGES : リアルな絵に差し替えたいときの PNG（img/ フォルダに置く。無ければ簡易図形）
    ■ それより下（描画・センサー・連動）は、動作を変えたいとき以外は触らない
    ■ 置き場所：httpsのサーバー（Firebase Hosting, GitHub Pages など）。
      このファイルをそのままアップロードすれば動く（サーバー側の処理はない）
@@ -340,13 +344,27 @@
     50: { t: '水の深さ 50cm', s: 'おとなも 歩くのが むずかしい。車が うき出す' },
     70: { t: '水の深さ 70cm', s: '大人の男の人でも 歩けない。こうなる前に 高いところへ にげよう' },
   };
+  // 画像素材（PNG・背景透明）。同じフォルダの img/ に置くと簡易図形の代わりに描かれる。無ければ簡易図形のまま。
+  // w: 実物の幅（m）。車は正面から見た絵、浮遊物は上からやや斜めの絵、ライト消灯/ハザードは無くてもよい
+  const IMAGES = {
+    car: { file: 'img/car.png', w: 1.75 }, carStalled: { file: 'img/car_hazard.png', w: 1.75 },
+    bottle: { file: 'img/bottle.png', w: 0.25 }, bag: { file: 'img/bag.png', w: 0.4 }, can: { file: 'img/can.png', w: 0.12 },
+    branch: { file: 'img/branch.png', w: 0.6 }, bucket: { file: 'img/bucket.png', w: 0.3 }, foam: { file: 'img/foam.png', w: 0.38 },
+  };
+  const IMG = {};
+  Object.entries(IMAGES).forEach(([k, v]) => { const im = new Image(); im.onload = () => { IMG[k] = im; }; im.onerror = () => {}; im.src = v.file; });
+  function drawImg(k, X, Y, ppm) {
+    const im = IMG[k]; if (!im) return false;
+    const w = IMAGES[k].w * ppm, h = w * im.height / im.width;
+    ctx.drawImage(im, X - w / 2, Y - h, w, h); return true;
+  }
   const WC = 'rgba(100,110,75,0.62)';
   const S = {
     level: 0, auto: false, autoT: 0, reveal: false, stereo: false, cam: false,
     eyeH: 1.1, gyro: false, q: null, dragYaw: 0, dragPitch: 0, t: 0,
     lock: false, remote: false, epoch: 0,
     corridor: true, station: 0, calib: false, cal: { yaw: 0, fov: 66, z: 0, x: 0 }, sound: false,
-    car: null, debris: [], debrisT: 0, overflowT: 0, mhT: 0, murk: 0,
+    car: null, debris: [], debrisT: 0, overflowT: 0, mhT: 0, murk: 0, murkMode: 'auto', debrisOn: true,
   };
   try { const c = JSON.parse(localStorage.getItem('cal') || 'null'); if (c && typeof c.fov === 'number') S.cal = c; } catch (e) {}
   if (!S.cal.w) S.cal.w = 1.5;
@@ -370,6 +388,26 @@
     syncDesk();
   }
 
+
+  // ---------- スタッフの操作卓（desk.html）とつなぐ ----------
+  let deskConn = null, deskSeen = 0, deskCarSeen = 0;
+  function joinDesk(code, onState) {
+    if (!code || typeof Peer === 'undefined') return;
+    try { localStorage.setItem('deskCode', code); } catch (e) {}
+    const peer = new Peer();
+    const connect = () => {
+      const c = peer.connect('floodscope-' + code, { reliable: true });
+      c.on('open', () => { deskConn = c; onState({ connected: true }); });
+      c.on('data', d => { if (!d || typeof d.epoch !== 'number' || d.epoch < deskSeen) return; deskSeen = d.epoch; onState(d); });
+      c.on('close', () => { deskConn = null; onState({ connected: false }); setTimeout(connect, 2000); });
+      c.on('error', () => { deskConn = null; setTimeout(connect, 3000); });
+    };
+    peer.on('open', connect);
+    peer.on('disconnected', () => setTimeout(() => { try { peer.reconnect(); } catch (e) {} }, 1500));
+  }
+
+  try { const c = localStorage.getItem('deskCode'); if (c) $('deskCode').value = c; } catch (e) {}
+
   // ---------- 体験の開始・終了 ----------
   const exp = $('exp'), cv = $('cv'), ctx = cv.getContext('2d'), cam = $('cam');
   let raf = 0, stream = null;
@@ -389,6 +427,17 @@
     syncDesk();
     resize();
     if (!raf) loop();
+    if (!needsPermission) enableSensor(false); else if (!S.gyro) $('sensorBtn').textContent = 'センサーON';
+    const code = $('deskCode').value.trim();
+    if (code && !deskConn && !S.deskJoined) { S.deskJoined = true; joinDesk(code, d => {
+      if (d.connected === true) { exp.classList.add('nohud'); $('hudBtn').textContent = 'ボタンを出す'; S.remote = true; $('remoteBadge').hidden = false; }
+      if (LEVELS.includes(d.level) && d.level !== S.level) setLevel(d.level);
+      if (typeof d.reveal === 'boolean' && d.reveal !== S.reveal) setReveal(d.reveal);
+      if (typeof d.lock === 'boolean') S.lock = d.lock;
+      if (d.murk === 'auto' || d.murk === 'clear' || d.murk === 'mud') S.murkMode = d.murk;
+      if (typeof d.debris === 'boolean') S.debrisOn = d.debris;
+      if (typeof d.car === 'number' && d.car > deskCarSeen) { deskCarSeen = d.car; startCar(); }
+    }); }
   }
   function leave() {
     exp.classList.remove('on');
@@ -492,16 +541,19 @@
   }
 
   // ---------- センサー（ジャイロ） ----------
-  $('sensorBtn').addEventListener('click', async () => {
+  async function enableSensor(fromButton) {
     try {
       if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         const r = await DeviceOrientationEvent.requestPermission();
         if (r !== 'granted') { $('sensorBtn').textContent = 'センサー許可なし'; return; }
       }
       window.addEventListener('deviceorientation', onOrient, true);
-      $('sensorBtn').textContent = 'センサー動作中';
+      $('sensorBtn').textContent = 'センサー確認中…';
+      setTimeout(() => { $('sensorBtn').textContent = S.gyro ? 'センサー動作中' : 'センサーなし'; }, 1500);
     } catch (e) { $('sensorBtn').textContent = 'センサー使えません'; }
-  });
+  }
+  $('sensorBtn').addEventListener('click', () => enableSensor(true));
+  const needsPermission = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
   // クォータニオン小道具
   const qMul = (a, b) => [
     a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[2]*b[1],
@@ -559,6 +611,8 @@
     cv.width = W * DPR; cv.height = H * DPR;
   }
   window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 300));
+  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', () => setTimeout(resize, 300));
 
   // まちの構成（単位 m、zが奥）
   const buildings = [];
@@ -1013,10 +1067,10 @@
   }
   function updateDebris(dt) {
     const lvl = S.level === 5 ? 0.05 : S.level / 100;
-    if (lvl >= 0.1 && lvl < S.eyeH) {
+    if (lvl >= 0.1 && lvl < S.eyeH && S.debrisOn) {
       S.debrisT += dt;
       if (S.debrisT > (S.corridor ? 1.6 : 2.2) && S.debris.length < 10) { S.debrisT = 0; spawnDebris(); }
-    } else if (lvl === 0) S.debris.length = 0;
+    } else if (lvl === 0 || !S.debrisOn) S.debris.length = 0;
     S.debris.forEach(d => { if (S.corridor) { d.x -= d.v * dt; } else if (d.z > d.stop) d.z = Math.max(d.stop, d.z - d.v * dt); d.rot += dt * 0.3; });
     if (S.corridor) S.debris = S.debris.filter(d => d.x > -2.8);
   }
@@ -1027,6 +1081,7 @@
       const p = c.P(d.x, y, d.z); if (p.z < 0.1) return;
       const ppm = c.f / p.z, X = p.x, Y = p.y;
       const R = (x0, y0, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(X + (x0 - w / 2) * ppm, Y - (y0 + h) * ppm, w * ppm, h * ppm); };
+      if (drawImg(d.k, X, Y, ppm)) return;
       if (d.k === 'bucket') { ctx.fillStyle = '#3c8fd6'; ctx.beginPath(); ctx.moveTo(X - 0.16 * ppm, Y - 0.26 * ppm); ctx.lineTo(X + 0.16 * ppm, Y - 0.26 * ppm); ctx.lineTo(X + 0.12 * ppm, Y); ctx.lineTo(X - 0.12 * ppm, Y); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#8fc4ee'; ctx.lineWidth = Math.max(1, 0.015 * ppm); ctx.beginPath(); ctx.arc(X, Y - 0.26 * ppm, 0.16 * ppm, Math.PI, 0); ctx.stroke(); }
       else if (d.k === 'can') { R(0, 0, 0.12, 0.065, '#d9d9d9'); R(-0.05, 0.0, 0.02, 0.065, '#9a9a9a'); R(0.05, 0.0, 0.02, 0.065, '#9a9a9a'); R(0, 0.02, 0.07, 0.025, '#c8352e'); }
       else if (d.k === 'bag') { ctx.fillStyle = '#2f3438'; ctx.beginPath(); ctx.ellipse(X, Y - 0.12 * ppm, 0.24 * ppm, 0.14 * ppm, 0, 0, Math.PI * 2); ctx.fill(); R(0.12, 0.2, 0.08, 0.08, '#4a5056'); }
@@ -1043,17 +1098,22 @@
     if (!S.car) return;
     const lvl = S.level === 5 ? 0.05 : S.level / 100;
     const age = S.t - S.car.t0;
-    if (!S.car.stalled && (age > 6 || (lvl >= 0.3 && age > 3.2))) { S.car.stalled = true; S.car.stallT = S.t; if (S.sound) snd.engine(false); }
+    const startZ = S.corridor ? 14 : 45, stopZ = S.corridor ? 3.2 : 5.0, endZ = S.corridor ? -6 : -3;
+    // 30cm未満：水しぶきを上げて通り過ぎる。30cm以上：止まる位置で止まる
+    if (!S.car.stalled) {
+      const speed = S.corridor ? 3.0 : 8.0;
+      S.car.z = (S.car.z === undefined ? startZ : S.car.z) - speed * dt;
+      if (lvl >= 0.3 && S.car.z <= stopZ) { S.car.z = stopZ; S.car.stalled = true; S.car.stallT = S.t; if (S.sound) snd.engine(false); }
+      if (S.car.z < endZ) { S.car = null; if (S.sound) snd.engine(false); return; }
+    }
     if (S.car.stalled && lvl >= 0.5) S.car.floatT += dt;
-    if (age > 60) { S.car = null; if (S.sound) snd.engine(false); }
+    if (S.car.stalled && age > 60) { S.car = null; if (S.sound) snd.engine(false); }
   }
   function drawCar(c, lvl, laneX, stopZ) {
     if (!S.car) return;
-    const age = S.t - S.car.t0;
-    const startZ = S.corridor ? 14 : 45;
-    const u = Math.min(1, age / 6), ease = 1 - Math.pow(1 - u, 3);
-    let z = startZ + (stopZ - startZ) * ease;
-    if (S.car.stalled && age < 6) z = Math.max(z, stopZ); // 早めに止まった
+    const ease = S.car.stalled ? 1 : 0.3;
+    let z = S.car.z === undefined ? (S.corridor ? 14 : 45) : S.car.z;
+    if (z < 0.3) return;
     let base = 0, x = laneX;
     if (S.car.floatT > 0) { base = Math.min(0.15, S.car.floatT * 0.05) + 0.03 * Math.sin(S.t * 1.5); x += Math.sin(S.car.floatT * 0.4) * 0.3; }
     const fg = { k: 'car', x, z, h: 1.5, base, name: '' };
@@ -1062,11 +1122,13 @@
     const ppm = c.f / gb.z, X = gb.x, Y = gb.y;
     // ライト
     const moving = !S.car.stalled;
+    if (!fg.img) {
     ctx.fillStyle = moving ? '#fff7b0' : '#8a8560';
     ctx.fillRect(X - 0.76 * ppm, Y - 0.69 * ppm, 0.28 * ppm, 0.14 * ppm); ctx.fillRect(X + 0.48 * ppm, Y - 0.69 * ppm, 0.28 * ppm, 0.14 * ppm);
     if (moving) { ctx.fillStyle = 'rgba(255,247,176,0.25)'; ctx.beginPath(); ctx.moveTo(X - 0.62 * ppm, Y - 0.62 * ppm); ctx.lineTo(X - 1.6 * ppm, Y + 0.3 * ppm); ctx.lineTo(X - 0.1 * ppm, Y + 0.3 * ppm); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(X + 0.62 * ppm, Y - 0.62 * ppm); ctx.lineTo(X + 1.6 * ppm, Y + 0.3 * ppm); ctx.lineTo(X + 0.1 * ppm, Y + 0.3 * ppm); ctx.closePath(); ctx.fill(); }
     // ハザード
     if (S.car.stalled && Math.floor((S.t - S.car.stallT) * 2) % 2 === 0) { ctx.fillStyle = '#ff9a1f'; ctx.fillRect(X - 0.9 * ppm, Y - 0.62 * ppm, 0.12 * ppm, 0.1 * ppm); ctx.fillRect(X + 0.78 * ppm, Y - 0.62 * ppm, 0.12 * ppm, 0.1 * ppm); }
+    }
     // 水しぶき（走っている間、両側のタイヤから扇形に）
     if (moving && lvl > 0) {
       const sp = 1 - ease; // 速いほど大きい
@@ -1177,10 +1239,13 @@
     const R = (x0, y0, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(X + (x0 - w / 2) * ppm, Y - (y0 + h) * ppm, w * ppm, h * ppm); };
     const C = (x0, y0, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(X + x0 * ppm, Y - y0 * ppm, r * ppm, 0, Math.PI * 2); ctx.fill(); };
     if (fg.k === 'car') {
+      if (drawImg(S.car && S.car.stalled && IMG.carStalled ? 'carStalled' : 'car', X, Y, ppm)) { fg.img = true; }
+      else {
       R(0, 0.3, 1.75, 0.55, '#d84a3a'); R(0, 0.85, 1.35, 0.55, '#d84a3a');
       R(0, 0.9, 1.1, 0.42, '#b9d6e8');
       C(-0.62, 0.3, 0.3, '#1c1f22'); C(0.62, 0.3, 0.3, '#1c1f22'); C(-0.62, 0.3, 0.13, '#8a8f95'); C(0.62, 0.3, 0.13, '#8a8f95');
       R(-0.62, 0.55, 0.28, 0.14, '#fff2b0'); R(0.62, 0.55, 0.28, 0.14, '#fff2b0');
+      }
     } else {
       const skin = '#f0c9a6', h = fg.h;
       const head = h * 0.085, torsoTop = h * 0.83, hip = h * 0.48;
@@ -1220,6 +1285,7 @@
   $('ctlReset').addEventListener('click', () => { setAuto(false); setReveal(false); setStation(0); setLevel(0); broadcast(); });
   $('ctlCar').addEventListener('click', () => { S.carEpoch = Date.now(); startCar(); broadcast(); });
   $('ctlStation').addEventListener('click', () => { setStation(S.station ? 0 : 1); broadcast(); });
+  $('ctlMurk').addEventListener('click', () => { S.murkMode = S.murkMode === 'auto' ? 'clear' : S.murkMode === 'clear' ? 'mud' : 'auto'; $('ctlMurk').textContent = '水のにごり：' + ({ auto: '自動', clear: '真水', mud: '泥水' })[S.murkMode]; broadcast(); });
   function setStation(n) { S.station = n; $('stationBtn').setAttribute('aria-pressed', String(n === 1)); syncDesk(); }
   function syncDesk() {
     LEVELS.forEach(x => { const b = $('ctl' + x); if (b) b.setAttribute('aria-pressed', String(x === S.level)); });
@@ -1281,6 +1347,7 @@
       if (typeof d.lock === 'boolean') S.lock = d.lock;
       if (d.eye === 1.1 || d.eye === 1.5) { if (d.eye !== S.eyeH) setEye(d.eye); }
       if (d.station === 0 || d.station === 1) { if (d.station !== S.station) setStation(d.station); }
+      if (d.murk === 'auto' || d.murk === 'clear' || d.murk === 'mud') S.murkMode = d.murk;
       if (typeof d.car === 'number' && d.car > (S.carSeen || 0)) { S.carSeen = d.car; startCar(); }
       S.remote = true; $('remoteBadge').hidden = false;
     });
@@ -1296,7 +1363,7 @@
   function broadcast() {
     if (!room || role !== 'desk') return;
     S.epoch = Date.now();
-    room.emit('ctl', { level: S.level, auto: S.auto, reveal: S.reveal, lock: S.lock, eye: S.eyeH, station: S.station, car: S.carEpoch || 0, epoch: S.epoch }).catch(() => {});
+    room.emit('ctl', { level: S.level, auto: S.auto, reveal: S.reveal, lock: S.lock, eye: S.eyeH, station: S.station, car: S.carEpoch || 0, murk: S.murkMode, epoch: S.epoch }).catch(() => {});
   }
 
   // ---------- ループ ----------
@@ -1308,7 +1375,7 @@
     if (S.auto && !S.remote && role !== 'desk') { S.autoT += dt; if (S.autoT > 7) { const i = LEVELS.indexOf(S.level); if (i < LEVELS.length - 1) setLevel(LEVELS[i + 1]); else setAuto(false); } }
     if (!W || !H) resize();
     if (S.level === 5) S.overflowT += dt;
-    if (S.level >= 10 && S.level < 100) S.murk = Math.min(1, S.murk + dt / 20); else if (S.level === 0) S.murk = 0;
+    if (S.murkMode === 'clear') S.murk = Math.max(0, S.murk - dt); else if (S.murkMode === 'mud') S.murk = Math.min(1, S.murk + dt); else if (S.level >= 10) S.murk = Math.min(1, S.murk + dt / 20); else if (S.level === 0) S.murk = 0;
     updateDebris(dt); updateCar(dt); if (S.sound) snd.update(dt);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, W, H);

@@ -16,6 +16,7 @@
   .big[disabled]{background:#9aa3a8}
   .note{font-size:13px;color:#5b6770}
   ol{padding-left:1.3em}
+  .opts{display:grid;gap:6px;font-size:15px}
   /* AR overlay */
   #ov{position:fixed;inset:0;display:none;pointer-events:none;font-family:"Zen Maru Gothic","Noto Sans JP",sans-serif}
   #ov.on{display:block}
@@ -32,9 +33,13 @@
   #bar .lv button{flex:1;padding:11px 0;border-radius:9px;border:0;background:rgba(255,255,255,.9);color:#1c2733;font:700 14px "Zen Maru Gothic",sans-serif}
   #bar .lv button[aria-pressed="true"]{background:var(--warn)}
   #bar .tl{display:flex;gap:5px}
-  #bar .tl button{flex:1;padding:8px 0;border-radius:9px;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.4);color:#fff;font:600 12px "Noto Sans JP",sans-serif}
+  #bar .tl{flex-wrap:wrap}
+  #bar .tl button{flex:1 1 30%;padding:8px 0;border-radius:9px;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.4);color:#fff;font:600 12px "Noto Sans JP",sans-serif}
   #bar .tl button[aria-pressed="true"]{background:rgba(255,255,255,.9);color:#1c2733}
   #ov.nobar #bar{display:none}
+  #more[hidden]{display:none}
+  #bar .tl button{flex:1 1 30%}
+  #bar .tl:first-of-type button{flex:1 1 45%}
   #top{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));left:10px;right:10px;display:flex;justify-content:space-between;pointer-events:auto}
   #top button{border:0;border-radius:999px;padding:7px 12px;background:rgba(0,0,0,.45);color:#fff;font:700 12px "Noto Sans JP",sans-serif}
 </style>
@@ -45,6 +50,8 @@
   <h1>まちの水位スコープ</h1>
   <p class="lead">AndroidのChromeで動くAR版です。歩いても位置が合い、奥行きセンサーが使える機種では本物のコーンや机が正しく水に沈んで見えます。1眼ゴーグルに入れて使えます。</p>
   <p>通路の幅：<label><input type="radio" name="w" value="1.2"> 1.2m</label>　<label><input type="radio" name="w" value="1.5" checked> 1.5m</label></p>
+  <p class="code-row">スタッフの操作コード：<input type="text" id="deskCode" inputmode="numeric" maxlength="4" placeholder="4けた" style="font:700 22px 'Zen Maru Gothic',sans-serif;width:6em;padding:6px 10px;border:1px solid var(--line);border-radius:10px;letter-spacing:.15em"> <span class="note">（desk.html に表示される数字。入れるとスタッフのPCから操作でき、端末のボタンは隠れます）</span></p>
+  <p class="opts"><label><input type="checkbox" id="optSound" checked> 音を出す</label><label><input type="checkbox" id="optRefract" checked> 水越しに床が透ける</label><label><input type="checkbox" id="optOcc" checked> 奥行きで本物を沈める</label><label><input type="checkbox" id="optLock"> 子どものタップで水位を変えない</label><label>水のにごり：<select id="optMurk"><option value="auto" selected>自動（だんだん泥水）</option><option value="clear">真水</option><option value="mud">泥水</option></select></label></p>
   <button class="big" id="startBtn" disabled>確認中…</button>
   <p id="support" class="note"></p>
   <ol>
@@ -56,23 +63,31 @@
 </div>
 
 <div id="ov">
-  <div id="top"><button id="exitBtn">← 終了</button><button id="barBtn">ボタンをかくす</button><button id="reBtn">置き直す</button></div>
+  <div id="top"><button id="exitBtn">← 終了</button><button id="barBtn">ボタンをかくす</button></div>
   <div id="msg"><b id="mT">あめが ふりはじめた</b><span><i id="mS">マンホールと みぞ（側溝）が 見えているね</i></span></div>
   <div id="hint"><i id="hintT">足元の床を タップして 通路の入口を決める</i></div>
   <div id="foot"><i id="fT" hidden></i></div>
   <div id="bar">
     <div class="lv" id="lv"></div>
     <div class="tl">
-      <button id="carBtn">🚗 車</button>
+      <button id="carBtn">🚗 車を走らせる</button>
+      <button id="moreBtn" aria-pressed="false">設定…</button>
+    </div>
+    <div class="tl" id="more" hidden>
       <button id="revealBtn" aria-pressed="false">見える化</button>
       <button id="occBtn" aria-pressed="true">奥行き</button>
       <button id="lockBtn" aria-pressed="false">タップ無効</button>
+      <button id="sndBtn" aria-pressed="false">音</button>
+      <button id="refBtn" aria-pressed="true">透け</button>
+      <button id="murkBtn">にごり切替</button>
+      <button id="reBtn">置き直す</button>
     </div>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script>
 /* =====================================================================
    まちの水位スコープ Android版（WebXR / ARCore）
@@ -91,7 +106,7 @@
     5:  ['みぞから 水が あふれてきた！', '下水道が いっぱいで 流しきれない。これが 内水氾濫'],
     10: ['水の深さ 10cm', 'くつの中に 水が入る。車は ブレーキが ききにくい'],
     20: ['水の深さ 20cm', 'マンホールも みぞも 見えない！ こどもは ひざ下'],
-    30: ['水の深さ 30cm', '車の エンジンが とまるかも'],
+    30: ['水の深さ 30cm', '車の エンジンが とまるかも。地下の かいだんは のぼれない'],
     50: ['水の深さ 50cm', 'おとなも 歩くのが むずかしい。車が うき出す'],
     70: ['水の深さ 70cm', '大人の男の人でも 歩けない。こうなる前に 高いところへ にげよう'],
   };
@@ -108,7 +123,7 @@
     foam:   { file: 'models/foam.glb',   size: 0.38, rotY: 0 },
     manhole:{ file: 'models/manhole.glb', size: 0.6, rotY: 0 },
   };
-  const S = { level: 0, placed: false, t: 0, overflowT: 0, murk: 0, reveal: false, occ: true, lock: false, car: null, debris: [], debrisT: 0, mhT: 0 };
+  const S = { level: 0, placed: false, t: 0, overflowT: 0, murk: 0, reveal: false, occ: true, lock: false, car: null, debris: [], debrisT: 0, mhT: 0, refract: true, sound: false, murkMode: 'auto', debrisOn: true };
   const $ = id => document.getElementById(id);
 
   // ---------- 対応確認 ----------
@@ -149,6 +164,7 @@
     uCamPos: { value: new THREE.Vector3() }, uSun: { value: new THREE.Vector3(0.3, 0.8, -0.5).normalize() },
     uObj: { value: Array.from({ length: MAXOBJ }, () => new THREE.Vector4()) }, uObjN: { value: 0 },
     uCar: { value: new THREE.Vector4(0, 0, 0, 0) }, // x, z, 速さ(0..1), 有効
+    uCam: { value: null }, uUseCam: { value: 0 }, uCamFlip: { value: 0 },
   };
   const waterMat = new THREE.ShaderMaterial({
     uniforms: waterUniforms, transparent: true, depthWrite: false,
@@ -160,6 +176,7 @@
       #define MAXOBJ ${MAXOBJ}
       uniform float uTime, uMurk, uLevel, uSpread, uPuddle, uGutterX, uUseDepth; uniform sampler2D uDepth; uniform mat4 uDepthMat; uniform vec4 uVp;
       uniform vec3 uCamPos, uSun; uniform vec4 uObj[MAXOBJ]; uniform int uObjN; uniform vec4 uCar;
+      uniform sampler2D uCam; uniform float uUseCam, uCamFlip;
       varying vec3 vLocal; varying float vViewZ; varying vec3 vWorld;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
       float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y); }
@@ -219,6 +236,16 @@
         vec3 clear = vec3(0.36, 0.44, 0.40), mud = vec3(0.42, 0.33, 0.20);
         vec3 col = mix(clear, mud, uMurk);
         col *= 0.75 + 0.35*diff;
+        // カメラ映像の屈折：水越しに床がゆがんで透けて見える
+        if (uUseCam > 0.5) {
+          vec2 uv = vec2((gl_FragCoord.x - uVp.x) / uVp.z, (gl_FragCoord.y - uVp.y) / uVp.w);
+          if (uCamFlip > 0.5) uv.y = 1.0 - uv.y;
+          vec2 off = n.xz * (0.06 / max(0.5, vViewZ));
+          vec3 cam = texture2D(uCam, clamp(uv + off, 0.0, 1.0)).rgb;
+          // 深いほど・濁るほど床は見えなくなる
+          float see = (1.0 - uMurk) * exp(-uLevel * 4.0);
+          col = mix(col, cam * mix(vec3(0.85,0.9,0.85), vec3(0.75,0.65,0.5), uMurk), see * 0.85);
+        }
         float foam = smoothstep(0.78, 0.95, h0);          // 波頭の泡
         col = mix(col, vec3(0.86, 0.88, 0.82), foam*0.7);
         col += vec3(0.9, 0.9, 0.85) * spec * (0.6 + 0.4*uMurk);
@@ -283,22 +310,28 @@
     else if (k === 'can') { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.12, 12).rotateZ(Math.PI / 2), M(0xd9d9d9, { metalness: 0.6, roughness: 0.4 })); g.add(b); }
     else if (k === 'branch') { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.025, 0.6, 6).rotateZ(Math.PI / 2), M(0x6b4a2b)); g.add(b); const t = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.22, 5), M(0x6b4a2b)); t.position.set(0.1, 0.08, 0); t.rotation.z = -0.6; g.add(t); }
     else if (k === 'bucket') { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.11, 0.26, 16, 1, true), M(0x3c8fd6, { side: THREE.DoubleSide })); b.rotation.z = 1.2; g.add(b); }
+    else if (k === 'bike') { const wm = M(0x1c1f22); [[-0.5, 0], [0.5, 0]].forEach(([x]) => { const w = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.02, 8, 24), wm); w.rotation.x = Math.PI / 2; w.position.set(x, 0.05, 0); g.add(w); }); const fm = M(0x2f6f9f); const f1 = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.9, 6).rotateZ(Math.PI / 2), fm); f1.position.y = 0.07; g.add(f1); const f2 = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.5, 6), fm); f2.position.set(0.1, 0.07, 0); f2.rotation.x = Math.PI / 2; f2.rotation.z = 0.9; g.add(f2); g.userData.big = true; }
+    else if (k === 'timber') { const b = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.1, 0.1), M(0xb08a55)); b.rotation.y = 0.3; g.add(b); g.userData.big = true; }
+    else if (k === 'sign') { const b = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.02, 0.45), M(0xf2f2ee)); g.add(b); const t = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.025, 0.08), M(0xc8352e)); t.position.set(0, 0.005, -0.1); g.add(t); g.userData.big = true; }
     else { const b = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.2, 0.28), M(0xf3f3ee)); g.add(b); }
     return g;
   }
   const KINDS = ['bottle', 'bag', 'can', 'branch', 'bucket', 'bottle', 'foam'];
+  const BIG = ['bike', 'timber', 'sign'];   // 50cm以上で流れてくる大きなもの
   function spawnDebris() {
-    const k = KINDS[Math.floor(Math.random() * KINDS.length)];
+    const lvlNow = S.level / 100;
+    const k = (lvlNow >= 0.5 && Math.random() < 0.35) ? BIG[Math.floor(Math.random() * BIG.length)] : KINDS[Math.floor(Math.random() * KINDS.length)];
     const m = makeDebris(k);
     m.position.set(COR.gutterX + 0.4 + Math.random() * 0.6, 0, 0.4 + Math.random() * 2.6);
     m.rotation.y = Math.random() * 6.28;
-    m.userData = { v: 0.25 + Math.random() * 0.15, ph: Math.random() * 6.28 };
+    const big = !!m.userData.big;
+    m.userData = { v: big ? 0.18 + Math.random() * 0.08 : 0.25 + Math.random() * 0.15, ph: Math.random() * 6.28, big };
     debrisGroup.add(m); S.debris.push(m);
   }
   function updateDebris(dt, lvl) {
-    if (lvl >= 0.1) { S.debrisT += dt; if (S.debrisT > 1.6 && S.debris.length < 10) { S.debrisT = 0; spawnDebris(); } }
+    if (lvl >= 0.1 && S.debrisOn) { S.debrisT += dt; if (S.debrisT > 1.6 && S.debris.length < 10) { S.debrisT = 0; spawnDebris(); } }
     S.debris.forEach(m => { m.position.x -= m.userData.v * dt; m.position.y = lvl + 0.02 * Math.sin(S.t * 2 + m.userData.ph); m.rotation.y += dt * 0.3; m.rotation.z = 0.08 * Math.sin(S.t * 1.7 + m.userData.ph); m.rotation.x = 0.06 * Math.sin(S.t * 2.3 + m.userData.ph * 1.3); });
-    S.debris = S.debris.filter(m => { if (m.position.x < COR.laneX - 0.5 || lvl < 0.1) { debrisGroup.remove(m); return false; } return true; });
+    S.debris = S.debris.filter(m => { if (m.position.x < COR.laneX - 0.5 || lvl < 0.1 || !S.debrisOn) { debrisGroup.remove(m); return false; } return true; });
   }
 
   // ---------- 車 ----------
@@ -319,15 +352,21 @@
     car.children.forEach(ch => { if (!ch.userData.keep) ch.visible = false; });
     car.add(model); model.userData.keep = true; car.userData.model = model;
   }
-  function startCar() { S.car = { t0: S.t, stalled: false, stallT: 0, floatT: 0 }; car.visible = true; }
+  function startCar() { S.car = { t0: S.t, stalled: false, stallT: 0, floatT: 0 }; car.visible = true; if (S.sound) snd.engine(true); }
   function updateCar(dt, lvl) {
     if (!S.car) return;
     const age = S.t - S.car.t0;
-    if (!S.car.stalled && (age > 6 || (lvl >= 0.3 && age > 3.2))) { S.car.stalled = true; S.car.stallT = S.t; }
+    const startZ = 14, stopZ = 3.2, endZ = -8;
+    // 30cm未満：水しぶきを上げて通り過ぎる。30cm以上：止まる位置まで来たら止まる
+    if (!S.car.stalled) {
+      const speed = 3.0; // m/s
+      S.car.z = (S.car.z === undefined ? startZ : S.car.z) - speed * dt;
+      if (lvl >= 0.3 && S.car.z <= stopZ) { S.car.z = stopZ; S.car.stalled = true; S.car.stallT = S.t; if (S.sound) snd.engine(false); }
+      if (S.car.z < endZ) { S.car = null; car.visible = false; if (S.sound) snd.engine(false); return; }
+    }
     if (S.car.stalled && lvl >= 0.5) S.car.floatT += dt;
-    if (age > 60) { S.car = null; car.visible = false; return; }
-    const startZ = 14, stopZ = 3.2, u = Math.min(1, age / 6), ease = 1 - Math.pow(1 - u, 3);
-    let z = startZ + (stopZ - startZ) * ease; if (S.car.stalled) z = Math.min(z, Math.max(stopZ, z));
+    if (S.car.stalled && age > 60) { S.car = null; car.visible = false; return; }
+    const z = S.car.z;
     let y = 0, x = COR.laneX, roll = 0;
     if (S.car.floatT > 0) { y = Math.min(0.15, S.car.floatT * 0.05) + 0.03 * Math.sin(S.t * 1.5); x += Math.sin(S.car.floatT * 0.4) * 0.3; roll = 0.05 * Math.sin(S.t * 1.2); }
     car.position.set(x, y, z); car.rotation.set(0, Math.PI, roll);
@@ -336,7 +375,7 @@
     const blink = S.car.stalled && Math.floor((S.t - S.car.stallT) * 2) % 2 === 0;
     car.userData.hz.forEach(l => l.visible = blink);
     const sp = car.userData.spray; sp.visible = moving && lvl > 0;
-    if (sp.visible) { const k = 1 - ease; sp.children.forEach((d, i) => { const t = (S.t * 3 + i * 0.13) % 1, sg = i % 2 ? 1 : -1; d.position.set(sg * (0.8 + (0.5 + 0.6 * k) * t), lvl + (0.25 + 0.55 * k) * Math.sin(t * Math.PI) * (0.6 + 0.4 * ((i * 7) % 5) / 5) - y, 1.2 - t * 1.5); }); }
+    if (sp.visible) { const k = 1; sp.children.forEach((d, i) => { const t = (S.t * 3 + i * 0.13) % 1, sg = i % 2 ? 1 : -1; d.position.set(sg * (0.8 + (0.5 + 0.6 * k) * t), lvl + (0.25 + 0.55 * k) * Math.sin(t * Math.PI) * (0.6 + 0.4 * ((i * 7) % 5) / 5) - y, 1.2 - t * 1.5); }); }
   }
 
   // ---------- 状態の反映 ----------
@@ -347,7 +386,7 @@
     LEVELS.forEach(x => $('lv' + x).setAttribute('aria-pressed', String(x === l)));
     $('mT').textContent = MSG[l][0]; $('mS').textContent = MSG[l][1];
     if (l === 5 && prev !== 5) S.overflowT = 0;
-    if (l >= 20 && prev < 20) S.mhT = S.t;
+    if (l >= 20 && prev < 20) { S.mhT = S.t; if (S.sound) snd.alarm(); }
     if (l === 0) { S.mhT = 0; S.murk = 0; S.debris.forEach(m => debrisGroup.remove(m)); S.debris = []; S.car = null; car.visible = false; }
     const f = $('fT');
     if (S.car && S.car.stalled) { f.hidden = false; f.textContent = '水の深さ30cmで 車の エンジンが とまった'; }
@@ -361,6 +400,39 @@
   $('revealBtn').addEventListener('click', e => { S.reveal = !S.reveal; e.target.setAttribute('aria-pressed', String(S.reveal)); });
   $('occBtn').addEventListener('click', e => { S.occ = !S.occ; e.target.setAttribute('aria-pressed', String(S.occ)); });
   $('lockBtn').addEventListener('click', e => { S.lock = !S.lock; e.target.setAttribute('aria-pressed', String(S.lock)); });
+  $('moreBtn').addEventListener('click', e => { const m = $('more'); m.hidden = !m.hidden; e.target.setAttribute('aria-pressed', String(!m.hidden)); });
+  $('murkBtn').addEventListener('click', () => { S.murkMode = S.murkMode === 'auto' ? 'clear' : S.murkMode === 'clear' ? 'mud' : 'auto'; $('murkBtn').textContent = 'にごり：' + ({ auto: '自動', clear: '真水', mud: '泥水' })[S.murkMode]; });
+  $('sndBtn').addEventListener('click', e => { S.sound = !S.sound; e.target.setAttribute('aria-pressed', String(S.sound)); if (S.sound) snd.start(); else snd.stop(); });
+  $('refBtn').addEventListener('click', e => { S.refract = !S.refract; e.target.setAttribute('aria-pressed', String(S.refract)); });
+  // ---------- 音（雨・流れ・湧き出し・車） ----------
+  const snd = (() => {
+    let ac = null, rain = null, flow = null, flowGain = null, bub = null, bubGain = null, eng = null, engGain = null, tick = 0;
+    function ctxInit() { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); return ac; }
+    function noise(a) { const b = a.createBuffer(1, a.sampleRate * 2, a.sampleRate); const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; const s = a.createBufferSource(); s.buffer = b; s.loop = true; return s; }
+    return {
+      start() {
+        const a = ctxInit();
+        if (!rain) { rain = noise(a); const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 0.6; const g = a.createGain(); g.gain.value = 0.10; rain.connect(f).connect(g).connect(a.destination); rain.start(); }
+        if (!flow) { flow = noise(a); const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900; flowGain = a.createGain(); flowGain.gain.value = 0; flow.connect(f).connect(flowGain).connect(a.destination); flow.start(); }
+        if (!bub) { bub = noise(a); const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400; bubGain = a.createGain(); bubGain.gain.value = 0; bub.connect(f).connect(bubGain).connect(a.destination); bub.start(); }
+      },
+      stop() { if (ac) ac.suspend(); },
+      update(dt) {
+        if (!ac || ac.state !== 'running') return;
+        if (bubGain) bubGain.gain.value = S.level === 5 ? 0.25 + 0.15 * Math.sin(S.t * 7) : (S.level >= 10 ? 0.05 : 0);
+        if (flowGain) flowGain.gain.value = S.level >= 10 ? Math.min(0.22, 0.05 + S.level / 400) * (0.9 + 0.1 * Math.sin(S.t * 0.7)) : 0;
+        if (eng) eng.frequency.value = S.car && !S.car.stalled ? 70 + 40 * Math.sin(S.t * 1.3) : 30;
+        if (S.car && S.car.stalled) { tick += dt; if (tick > 0.5) { tick = 0; this.click(); } }
+      },
+      engine(on) {
+        const a = ctxInit();
+        if (on && !eng) { eng = a.createOscillator(); eng.type = 'sawtooth'; eng.frequency.value = 90; const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 500; engGain = a.createGain(); engGain.gain.value = 0.12; eng.connect(f).connect(engGain).connect(a.destination); eng.start(); }
+        if (!on && eng) { const e = eng, g = engGain; eng = null; e.frequency.linearRampToValueAtTime(30, a.currentTime + 0.8); g.gain.linearRampToValueAtTime(0, a.currentTime + 0.9); setTimeout(() => { try { e.stop(); } catch (x) {} }, 1000); }
+      },
+      click() { const a = ctxInit(); const o = a.createOscillator(); o.type = 'square'; o.frequency.value = 1800; const g = a.createGain(); g.gain.value = 0.05; o.connect(g).connect(a.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.05); o.stop(a.currentTime + 0.06); },
+      alarm() { const a = ctxInit(); [0, 0.35, 0.7].forEach(t => { const o = a.createOscillator(); o.type = 'square'; o.frequency.value = 1100; const g = a.createGain(); g.gain.value = 0.12; o.connect(g).connect(a.destination); o.start(a.currentTime + t); o.stop(a.currentTime + t + 0.25); }); },
+    };
+  })();
   $('barBtn').addEventListener('click', e => { const off = $('ov').classList.toggle('nobar'); e.target.textContent = off ? 'ボタンを出す' : 'ボタンをかくす'; });
   $('reBtn').addEventListener('click', () => { S.placed = false; cor.visible = false; $('hint').hidden = false; });
   window.addEventListener('keydown', e => {
@@ -375,8 +447,29 @@
     if (hit) e.preventDefault();
   });
 
+
+  // ---------- スタッフの操作卓（desk.html）とつなぐ ----------
+  let deskConn = null, deskSeen = 0, deskCarSeen = 0;
+  function joinDesk(code, onState) {
+    if (!code || typeof Peer === 'undefined') return;
+    try { localStorage.setItem('deskCode', code); } catch (e) {}
+    const peer = new Peer();
+    const connect = () => {
+      const c = peer.connect('floodscope-' + code, { reliable: true });
+      c.on('open', () => { deskConn = c; onState({ connected: true }); });
+      c.on('data', d => { if (!d || typeof d.epoch !== 'number' || d.epoch < deskSeen) return; deskSeen = d.epoch; onState(d); });
+      c.on('close', () => { deskConn = null; onState({ connected: false }); setTimeout(connect, 2000); });
+      c.on('error', () => { deskConn = null; setTimeout(connect, 3000); });
+    };
+    peer.on('open', connect);
+    peer.on('disconnected', () => setTimeout(() => { try { peer.reconnect(); } catch (e) {} }, 1500));
+  }
+
+  try { const c = localStorage.getItem('deskCode'); if (c) $('deskCode').value = c; } catch (e) {}
+
   // ---------- XRセッション ----------
-  let session = null, refSpace = null, viewerSpace = null, hitSource = null, depthOK = false;
+  let session = null, refSpace = null, viewerSpace = null, hitSource = null, depthOK = false, glBinding = null;
+  const camThreeTex = new THREE.Texture(); camThreeTex.minFilter = THREE.LinearFilter; camThreeTex.magFilter = THREE.LinearFilter; camThreeTex.generateMipmaps = false;
   function applyWidth(w) {
     COR.w = w; COR.gutterX = w / 2 + 0.23; COR.laneX = -(w / 2 + 1.25);
     waterUniforms.uGutterX.value = COR.gutterX;
@@ -385,6 +478,21 @@
   }
   startBtn.addEventListener('click', async () => {
     applyWidth(+document.querySelector('input[name=w]:checked').value);
+    S.refract = $('optRefract').checked; $('refBtn').setAttribute('aria-pressed', String(S.refract));
+    S.occ = $('optOcc').checked; $('occBtn').setAttribute('aria-pressed', String(S.occ));
+    S.lock = $('optLock').checked; $('lockBtn').setAttribute('aria-pressed', String(S.lock));
+    S.murkMode = $('optMurk').value;
+    S.sound = $('optSound').checked; $('sndBtn').setAttribute('aria-pressed', String(S.sound)); if (S.sound) snd.start();
+    const code = $('deskCode').value.trim();
+    if (code) joinDesk(code, d => {
+      if (d.connected === true) { $('ov').classList.add('nobar'); $('barBtn').textContent = 'ボタンを出す'; }
+      if (LEVELS.includes(d.level) && d.level !== S.level) setLevel(d.level);
+      if (typeof d.reveal === 'boolean') S.reveal = d.reveal;
+      if (typeof d.lock === 'boolean') S.lock = d.lock;
+      if (d.murk === 'auto' || d.murk === 'clear' || d.murk === 'mud') S.murkMode = d.murk;
+      if (typeof d.debris === 'boolean') S.debrisOn = d.debris;
+      if (typeof d.car === 'number' && d.car > deskCarSeen) { deskCarSeen = d.car; startCar(); }
+    });
     // 奥行きの指定はブラウザの版で名前が違うので、順に試す（最後は奥行きなし）
     const tries = [
       { depthSensing: { usagePreference: ['cpu-optimized', 'gpu-optimized'], dataFormatPreference: ['unsigned-short', 'float32'] } },
@@ -394,7 +502,7 @@
     ];
     let lastErr = null; session = null;
     for (const t of tries) {
-      const init = { requiredFeatures: ['hit-test', 'local-floor'], optionalFeatures: ['dom-overlay'], domOverlay: { root: $('ov') } };
+      const init = { requiredFeatures: ['hit-test', 'local-floor'], optionalFeatures: ['dom-overlay', 'camera-access'], domOverlay: { root: $('ov') } };
       if (t) { init.optionalFeatures.push('depth-sensing'); init.depthSensing = t.depthSensing; }
       try { session = await navigator.xr.requestSession('immersive-ar', init); break; }
       catch (e) { lastErr = e; }
@@ -407,6 +515,7 @@
     viewerSpace = await session.requestReferenceSpace('viewer');
     hitSource = await session.requestHitTestSource({ space: viewerSpace });
     depthOK = !!(session.depthUsage);
+    try { glBinding = new XRWebGLBinding(session, renderer.getContext()); } catch (e) { glBinding = null; }
     $('occBtn').textContent = depthOK ? '奥行き' : '奥行きなし';
     session.addEventListener('end', () => { $('ov').classList.remove('on'); $('home').style.display = ''; renderer.domElement.remove(); session = null; S.placed = false; cor.visible = false; setLevel(0); });
     session.addEventListener('select', onSelect);
@@ -433,7 +542,7 @@
     const dt = Math.min(0.1, (time - last) / 1000 || 0); last = time; S.t += dt;
     const lvlRaw = S.level === 5 ? 0.05 : S.level / 100, lvl = lvlRaw;
     if (S.level === 5) S.overflowT += dt;
-    if (S.level >= 10) S.murk = Math.min(1, S.murk + dt / 20);
+    if (S.murkMode === 'clear') S.murk = Math.max(0, S.murk - dt); else if (S.murkMode === 'mud') S.murk = Math.min(1, S.murk + dt); else if (S.level >= 10) S.murk = Math.min(1, S.murk + dt / 20);
 
     if (frame) {
       // ヒットテスト
@@ -465,6 +574,18 @@
         } catch (e) { used = 0; }
       }
       waterUniforms.uUseDepth.value = used;
+      // カメラ映像（屈折用）
+      let camOK = 0;
+      if (S.refract) {
+        try {
+          const pose = frame.getViewerPose(refSpace);
+          if (pose && pose.views[0].camera && glBinding) {
+            const tex = glBinding.getCameraImage(pose.views[0].camera);
+            if (tex) { const props = renderer.properties.get(camThreeTex); props.__webglTexture = tex; props.__webglInit = true; waterUniforms.uCam.value = camThreeTex; camOK = 1; }
+          }
+        } catch (e) { camOK = 0; }
+      }
+      waterUniforms.uUseCam.value = camOK;
     }
 
     // 水
@@ -474,7 +595,7 @@
     waterUniforms.uPuddle.value = S.level === 5 ? 1 : 0; waterUniforms.uSpread.value = Math.min(3.4, 0.1 + S.overflowT * 0.28);
     { const xr = renderer.xr.isPresenting ? renderer.xr.getCamera(camera) : camera; xr.getWorldPosition(waterUniforms.uCamPos.value); }
     { let n = 0; S.debris.forEach(m => { if (n < MAXOBJ) { waterUniforms.uObj.value[n].set(m.position.x, m.position.z, m.userData.ph, 0); n++; } }); waterUniforms.uObjN.value = n; }
-    if (S.car && car.visible) { const age = S.t - S.car.t0, u = Math.min(1, age / 6); waterUniforms.uCar.value.set(car.position.x, car.position.z, S.car.stalled ? 0 : 1 - u * 0.7, 1); } else waterUniforms.uCar.value.w = 0;
+    if (S.car && car.visible) waterUniforms.uCar.value.set(car.position.x, car.position.z, S.car.stalled ? 0 : 1, 1); else waterUniforms.uCar.value.w = 0;
     // マンホール
     const popped = S.mhT > 0;
     mhHole.material.color.set(popped ? 0x0d0f11 : 0x6e6a62);
@@ -483,7 +604,7 @@
     const age = S.t - S.mhT; spout.visible = popped && age < 4;
     if (spout.visible) spout.children.forEach((st, i) => { const hgt = (0.3 + 0.5 * Math.sin(age * 3 + i)) * (1 - age / 4); st.scale.y = Math.max(0.05, hgt / 0.6); st.position.set(mh.x + Math.cos(st.userData.a) * mh.r * 0.6, hgt / 2, mh.z + Math.sin(st.userData.a) * mh.r * 0.6); st.rotation.z = Math.cos(st.userData.a) * 0.4; st.rotation.x = -Math.sin(st.userData.a) * 0.4; });
     revealRing.visible = S.reveal && S.placed;
-    updateDebris(dt, lvl); updateCar(dt, lvl);
+    updateDebris(dt, lvl); updateCar(dt, lvl); if (S.sound) snd.update(dt);
     const f = $('fT'); if (S.car && S.car.stalled && S.level < 70 && f.hidden) { f.hidden = false; f.textContent = '水の深さ30cmで 車の エンジンが とまった'; }
     renderer.render(scene, camera);
   }
