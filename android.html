@@ -72,12 +72,14 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 /* =====================================================================
    まちの水位スコープ Android版（WebXR / ARCore）
    ---------------------------------------------------------------------
    ■ 編集してよいところ：LEVELS（水位の段階）, MSG（言葉）, COR（通路の寸法・側溝・車道・マンホール）,
-     KINDS（浮遊物の種類）。それより下の three.js / WebXR の部分は触らない
+     KINDS（浮遊物の種類）, MODELS（3Dモデルのファイル名と大きさ）。それより下の three.js / WebXR の部分は触らない
+   ■ リアルな見た目にしたいとき：models/ フォルダに .glb を置く（Poly Pizza, Kenney などの CC0 素材）。無ければ簡易形状で動く
    ■ 置き場所：https のサーバー必須（Firebase Hosting, GitHub Pages など）
    ■ 動作条件：ARCore 対応 Android + Chrome。奥行き（本物が正しく沈む）は機種依存
    ===================================================================== */
@@ -94,6 +96,18 @@
     70: ['水の深さ 70cm', '大人の男の人でも 歩けない。こうなる前に 高いところへ にげよう'],
   };
   const COR = { w: 1.5, len: 3.0, gutterX: 0.98, gutterW: 0.22, laneX: -2.0, manhole: { x: 0.25, z: 0.95, r: 0.3 } };
+  // 3Dモデル（glTF/.glb）。同じフォルダの models/ に置くと簡易形状の代わりに使われる。無ければ簡易形状のまま。
+  // size: 実物の大きさ（m）に合わせて自動で拡大縮小する基準（車=全長、その他=いちばん長い辺）。rotY: 向きの補正（度）
+  const MODELS = {
+    car:    { file: 'models/car.glb',    size: 4.2,  rotY: 0 },   // 正面（前）が -z を向くモデルなら rotY: 0
+    bottle: { file: 'models/bottle.glb', size: 0.25, rotY: 0, lay: true },
+    bag:    { file: 'models/bag.glb',    size: 0.4,  rotY: 0 },
+    can:    { file: 'models/can.glb',    size: 0.12, rotY: 0, lay: true },
+    branch: { file: 'models/branch.glb', size: 0.6,  rotY: 0 },
+    bucket: { file: 'models/bucket.glb', size: 0.3,  rotY: 0 },
+    foam:   { file: 'models/foam.glb',   size: 0.38, rotY: 0 },
+    manhole:{ file: 'models/manhole.glb', size: 0.6, rotY: 0 },
+  };
   const S = { level: 0, placed: false, t: 0, overflowT: 0, murk: 0, reveal: false, occ: true, lock: false, car: null, debris: [], debrisT: 0, mhT: 0 };
   const $ = id => document.getElementById(id);
 
@@ -127,48 +141,93 @@
   // ---------- 水（シェーダー：濁り・流れ・奥行きによる隠れ） ----------
   const depthTex = new THREE.DataTexture(new Float32Array(4), 2, 2, THREE.RedFormat, THREE.FloatType);
   depthTex.minFilter = THREE.NearestFilter; depthTex.magFilter = THREE.NearestFilter;
+  const MAXOBJ = 16;
   const waterUniforms = {
     uTime: { value: 0 }, uMurk: { value: 0 }, uLevel: { value: 0 }, uSpread: { value: 0 }, uPuddle: { value: 0 },
     uGutterX: { value: COR.gutterX }, uDepth: { value: depthTex }, uUseDepth: { value: 0 },
     uDepthMat: { value: new THREE.Matrix4() }, uVp: { value: new THREE.Vector4(0, 0, 1, 1) },
+    uCamPos: { value: new THREE.Vector3() }, uSun: { value: new THREE.Vector3(0.3, 0.8, -0.5).normalize() },
+    uObj: { value: Array.from({ length: MAXOBJ }, () => new THREE.Vector4()) }, uObjN: { value: 0 },
+    uCar: { value: new THREE.Vector4(0, 0, 0, 0) }, // x, z, 速さ(0..1), 有効
   };
   const waterMat = new THREE.ShaderMaterial({
     uniforms: waterUniforms, transparent: true, depthWrite: false,
     vertexShader: `
-      varying vec3 vLocal; varying float vViewZ;
-      void main(){ vLocal = position; vec4 mv = modelViewMatrix * vec4(position,1.0); vViewZ = -mv.z; gl_Position = projectionMatrix * mv; }`,
+      varying vec3 vLocal; varying float vViewZ; varying vec3 vWorld;
+      void main(){ vLocal = position; vec4 w = modelMatrix * vec4(position,1.0); vWorld = w.xyz; vec4 mv = viewMatrix * w; vViewZ = -mv.z; gl_Position = projectionMatrix * mv; }`,
     fragmentShader: `
       precision highp float;
+      #define MAXOBJ ${MAXOBJ}
       uniform float uTime, uMurk, uLevel, uSpread, uPuddle, uGutterX, uUseDepth; uniform sampler2D uDepth; uniform mat4 uDepthMat; uniform vec4 uVp;
-      varying vec3 vLocal; varying float vViewZ;
+      uniform vec3 uCamPos, uSun; uniform vec4 uObj[MAXOBJ]; uniform int uObjN; uniform vec4 uCar;
+      varying vec3 vLocal; varying float vViewZ; varying vec3 vWorld;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
       float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y); }
+      // 高さ場：右→左に流れる多重ノイズ ＋ 雨の波紋 ＋ 物体のまわりの輪
+      float height(vec2 p){
+        vec2 flow = vec2(uTime*0.55, uTime*0.05);
+        float h = 0.0;
+        h += noise(p*2.2 + flow) * 0.55;
+        h += noise(p*5.1 + flow*1.7 + 3.1) * 0.28;
+        h += noise(p*11.0 + flow*2.6 + 7.7) * 0.12;
+        h += noise(p*23.0 - flow*1.3 + 1.3) * 0.05;
+        // 雨の波紋（格子ごとにランダムな時刻で広がる輪）
+        vec2 g = floor(p*4.0); vec2 c = (g + 0.5 + (vec2(hash(g), hash(g+9.0)) - 0.5)*0.8) / 4.0;
+        float t0 = hash(g+3.0)*2.0; float ph = fract((uTime + t0)*0.5);
+        float r = ph*0.35; float d = length(p - c);
+        h += (1.0-ph) * 0.12 * sin((d - r)*90.0) * smoothstep(0.03, 0.0, abs(d - r));
+        // 浮遊物のまわりの輪
+        for (int i = 0; i < MAXOBJ; i++) { if (i >= uObjN) break;
+          vec2 op = uObj[i].xy; float dd = length(p - op);
+          h += 0.08 * sin(dd*40.0 - uTime*6.0 + uObj[i].z) * exp(-dd*6.0);
+        }
+        // 車の引き波（V字）
+        if (uCar.w > 0.5) { vec2 cp = p - uCar.xy; float back = cp.y; float side = abs(cp.x) - 0.85;
+          float v = smoothstep(0.15, 0.0, abs(side - back*0.35)) * step(0.0, back) * exp(-back*0.6) * uCar.z;
+          h += v * 0.35 * sin(back*14.0 - uTime*8.0); }
+        return h;
+      }
       void main(){
-        // 奥行きで隠す：本物の方が手前なら描かない
         if (uUseDepth > 0.5) {
-          vec2 nv = vec2((gl_FragCoord.x - uVp.x) / uVp.z, 1.0 - (gl_FragCoord.y - uVp.y) / uVp.w); // 左上原点・y下向き
+          vec2 nv = vec2((gl_FragCoord.x - uVp.x) / uVp.z, 1.0 - (gl_FragCoord.y - uVp.y) / uVp.w);
           vec2 duv = (uDepthMat * vec4(nv, 0.0, 1.0)).xy;
           if (duv.x >= 0.0 && duv.x <= 1.0 && duv.y >= 0.0 && duv.y <= 1.0) {
             float d = texture2D(uDepth, duv).r;
             if (d > 0.0 && d < vViewZ - 0.04) discard;
           }
         }
-        // 側溝からの広がり（あふれ段階）：x が大きい側（右）から左へ
-        // vLocal は平面ローカル（x: 左右、y: 奥行き）
-        float x = vLocal.x, z = 1.5 - vLocal.y; // 平面は x を左右、-y を奥行きに回してある
+        float x = vLocal.x, z = 1.5 - vLocal.y;
+        vec2 p = vec2(x, z);
+        float edgeA = 1.0;
         if (uPuddle > 0.5) {
           float edge = uGutterX - uSpread + 0.12*sin(z*5.0+uTime*1.2) + 0.08*sin(z*11.0-uTime*0.7);
-          if (x < edge || x > uGutterX + 0.3 || z < -0.6 || z > 3.6) discard;
+          if (x > uGutterX + 0.3 || z < -0.6 || z > 3.6) discard;
+          edgeA = smoothstep(edge - 0.06, edge + 0.06, x); if (edgeA <= 0.01) discard;
         }
-        // 流れ（右→左）と波
-        float n = noise(vec2(x*3.0 + uTime*0.9, z*3.0)) * 0.6 + noise(vec2(x*7.0 + uTime*1.6, z*7.0 + uTime*0.3)) * 0.4;
-        float crest = smoothstep(0.55, 0.75, n);
-        vec3 clear = vec3(0.45, 0.52, 0.42), mud = vec3(0.47, 0.38, 0.22);
+        // 法線（有限差分）
+        float e = 0.012;
+        float h0 = height(p), hx = height(p + vec2(e,0.0)), hz = height(p + vec2(0.0,e));
+        vec3 n = normalize(vec3(-(hx-h0)/e*0.05, 1.0, -(hz-h0)/e*0.05));
+        // ワールドの法線（cor は x を反転しているので、見た目の左右だけ変わる）
+        vec3 V = normalize(uCamPos - vWorld);
+        vec3 L = normalize(uSun);
+        float diff = max(0.0, dot(n, L));
+        vec3 H = normalize(L + V);
+        float spec = pow(max(0.0, dot(n, H)), 140.0);
+        float fres = pow(1.0 - max(0.0, dot(n, V)), 3.0);
+        // 色：澄んだ雨水 → 泥水
+        vec3 clear = vec3(0.36, 0.44, 0.40), mud = vec3(0.42, 0.33, 0.20);
         vec3 col = mix(clear, mud, uMurk);
-        col += crest * 0.18;
-        float a = mix(0.45, 0.8, uMurk) * (0.85 + 0.15*crest);
-        if (uPuddle > 0.5) a *= 0.75;
-        gl_FragColor = vec4(col, a);
+        col *= 0.75 + 0.35*diff;
+        float foam = smoothstep(0.78, 0.95, h0);          // 波頭の泡
+        col = mix(col, vec3(0.86, 0.88, 0.82), foam*0.7);
+        col += vec3(0.9, 0.9, 0.85) * spec * (0.6 + 0.4*uMurk);
+        col += vec3(0.55, 0.60, 0.62) * fres * 0.25;       // 空の映り込み
+        float a = mix(0.45, 0.82, uMurk);
+        a = mix(a, 0.95, fres*0.6);                        // 斜めから見るほど不透明
+        a += foam*0.15;
+        if (uPuddle > 0.5) a *= 0.8 * edgeA;
+        gl_FragColor = vec4(col, clamp(a, 0.0, 0.97));
       }`,
   });
   const water = new THREE.Mesh(new THREE.PlaneGeometry(24, 24, 1, 1), waterMat);
@@ -191,9 +250,32 @@
   const revealRing = new THREE.Mesh(new THREE.RingGeometry(mh.r * 1.1, mh.r * 1.25, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xff5a3c, depthTest: false }));
   revealRing.position.set(mh.x, 0.02, mh.z); revealRing.renderOrder = 9; revealRing.visible = false; cor.add(revealRing);
 
+  // ---------- 3Dモデルの読み込み（無ければ何もしない） ----------
+  const loaded = {};
+  const gltfLoader = (typeof THREE.GLTFLoader === 'function') ? new THREE.GLTFLoader() : null;
+  function fitModel(obj, size, lay) {
+    const box = new THREE.Box3().setFromObject(obj); const sz = new THREE.Vector3(); box.getSize(sz);
+    const longest = Math.max(sz.x, sz.y, sz.z) || 1; obj.scale.setScalar(size / longest);
+    const b2 = new THREE.Box3().setFromObject(obj); obj.position.y -= b2.min.y; // 底を 0 に
+    const c = new THREE.Vector3(); b2.getCenter(c); obj.position.x -= c.x; obj.position.z -= c.z;
+    if (lay) { obj.rotation.z = Math.PI / 2; const b3 = new THREE.Box3().setFromObject(obj); obj.position.y -= b3.min.y; }
+    return obj;
+  }
+  Object.entries(MODELS).forEach(([k, m]) => {
+    if (!gltfLoader) return;
+    gltfLoader.load(m.file, g => {
+      const root = new THREE.Group(); const obj = g.scene; obj.rotation.y = (m.rotY || 0) * Math.PI / 180; root.add(fitModel(obj, m.size, m.lay));
+      loaded[k] = root;
+      if (k === 'car') swapCar(root);
+      if (k === 'manhole') { mhLid.visible = false; const lid = root.clone(); lid.position.set(mh.x, 0.005, mh.z); cor.add(lid); mhLidModel = lid; }
+    }, undefined, () => {});
+  });
+  let mhLidModel = null;
+
   // ---------- 浮遊物 ----------
   const debrisGroup = new THREE.Group(); cor.add(debrisGroup);
   function makeDebris(k) {
+    if (loaded[k]) return loaded[k].clone();
     const g = new THREE.Group();
     const M = (c, o) => new THREE.MeshStandardMaterial(Object.assign({ color: c }, o || {}));
     if (k === 'bottle') { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.24, 12).rotateZ(Math.PI / 2), M(0xb4dcf0, { transparent: true, opacity: 0.85 })); g.add(b); const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.03, 8).rotateZ(Math.PI / 2), M(0x2a6fb0)); cap.position.x = -0.135; g.add(cap); }
@@ -215,7 +297,7 @@
   }
   function updateDebris(dt, lvl) {
     if (lvl >= 0.1) { S.debrisT += dt; if (S.debrisT > 1.6 && S.debris.length < 10) { S.debrisT = 0; spawnDebris(); } }
-    S.debris.forEach(m => { m.position.x -= m.userData.v * dt; m.position.y = lvl + 0.02 * Math.sin(S.t * 2 + m.userData.ph); m.rotation.y += dt * 0.3; m.rotation.z = 0.05 * Math.sin(S.t * 1.7 + m.userData.ph); });
+    S.debris.forEach(m => { m.position.x -= m.userData.v * dt; m.position.y = lvl + 0.02 * Math.sin(S.t * 2 + m.userData.ph); m.rotation.y += dt * 0.3; m.rotation.z = 0.08 * Math.sin(S.t * 1.7 + m.userData.ph); m.rotation.x = 0.06 * Math.sin(S.t * 2.3 + m.userData.ph * 1.3); });
     S.debris = S.debris.filter(m => { if (m.position.x < COR.laneX - 0.5 || lvl < 0.1) { debrisGroup.remove(m); return false; } return true; });
   }
 
@@ -228,10 +310,14 @@
     const glass = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.4, 1.9), M(0xb9d6e8)); glass.position.set(0, 1.08, -0.2); car.add(glass);
     [[-0.75, 1.3], [0.75, 1.3], [-0.75, -1.3], [0.75, -1.3]].forEach(([x, z]) => { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.22, 16).rotateZ(Math.PI / 2), M(0x1c1f22)); w.position.set(x, 0.32, z); car.add(w); });
     const hl = new THREE.MeshBasicMaterial({ color: 0xfff7b0 });
-    car.userData.lights = [[-0.55, 0.62, 2.01], [0.55, 0.62, 2.01]].map(p => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.14, 0.02), hl.clone()); l.position.set(...p); car.add(l); return l; });
-    car.userData.hz = [[-0.82, 0.62, 2.01], [0.82, 0.62, 2.01]].map(p => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.02), new THREE.MeshBasicMaterial({ color: 0xff9a1f })); l.position.set(...p); l.visible = false; car.add(l); return l; });
-    const sp = new THREE.Group(); car.add(sp); car.userData.spray = sp;
+    car.userData.lights = [[-0.55, 0.62, 2.01], [0.55, 0.62, 2.01]].map(p => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.14, 0.02), hl.clone()); l.position.set(...p); l.userData.keep = true; car.add(l); return l; });
+    car.userData.hz = [[-0.82, 0.62, 2.01], [0.82, 0.62, 2.01]].map(p => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.02), new THREE.MeshBasicMaterial({ color: 0xff9a1f })); l.position.set(...p); l.visible = false; l.userData.keep = true; car.add(l); return l; });
+    const sp = new THREE.Group(); sp.userData.keep = true; car.add(sp); car.userData.spray = sp;
     for (let i = 0; i < 24; i++) { const d = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 })); sp.add(d); }
+  }
+  function swapCar(model) {
+    car.children.forEach(ch => { if (!ch.userData.keep) ch.visible = false; });
+    car.add(model); model.userData.keep = true; car.userData.model = model;
   }
   function startCar() { S.car = { t0: S.t, stalled: false, stallT: 0, floatT: 0 }; car.visible = true; }
   function updateCar(dt, lvl) {
@@ -379,10 +465,14 @@
     water.position.y = (S.level === 5 ? 0.003 : lvl);
     waterUniforms.uTime.value = S.t; waterUniforms.uMurk.value = S.murk; waterUniforms.uLevel.value = lvl;
     waterUniforms.uPuddle.value = S.level === 5 ? 1 : 0; waterUniforms.uSpread.value = Math.min(3.4, 0.1 + S.overflowT * 0.28);
+    { const xr = renderer.xr.isPresenting ? renderer.xr.getCamera(camera) : camera; xr.getWorldPosition(waterUniforms.uCamPos.value); }
+    { let n = 0; S.debris.forEach(m => { if (n < MAXOBJ) { waterUniforms.uObj.value[n].set(m.position.x, m.position.z, m.userData.ph, 0); n++; } }); waterUniforms.uObjN.value = n; }
+    if (S.car && car.visible) { const age = S.t - S.car.t0, u = Math.min(1, age / 6); waterUniforms.uCar.value.set(car.position.x, car.position.z, S.car.stalled ? 0 : 1 - u * 0.7, 1); } else waterUniforms.uCar.value.w = 0;
     // マンホール
     const popped = S.mhT > 0;
     mhHole.material.color.set(popped ? 0x0d0f11 : 0x6e6a62);
     mhLid.position.set(popped ? mh.x + mh.r * 1.5 : mh.x, 0.01, popped ? mh.z + 0.1 : mh.z);
+    if (mhLidModel) mhLidModel.position.set(popped ? mh.x + mh.r * 1.5 : mh.x, 0.005, popped ? mh.z + 0.1 : mh.z);
     const age = S.t - S.mhT; spout.visible = popped && age < 4;
     if (spout.visible) spout.children.forEach((st, i) => { const hgt = (0.3 + 0.5 * Math.sin(age * 3 + i)) * (1 - age / 4); st.scale.y = Math.max(0.05, hgt / 0.6); st.position.set(mh.x + Math.cos(st.userData.a) * mh.r * 0.6, hgt / 2, mh.z + Math.sin(st.userData.a) * mh.r * 0.6); st.rotation.z = Math.cos(st.userData.a) * 0.4; st.rotation.x = -Math.sin(st.userData.a) * 0.4; });
     revealRing.visible = S.reveal && S.placed;
