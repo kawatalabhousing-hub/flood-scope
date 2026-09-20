@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>まちの水位スコープ Android版</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700;900&family=Noto+Sans+JP:wght@400;700&display=swap">
+<style>
+  :root{--ink:#1c2733;--bg:#f2f4ee;--panel:#fff;--line:#d6dbd2;--accent:#1f6f8b;--warn:#e8912d;--danger:#c8352e}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Noto Sans JP",system-ui,sans-serif;line-height:1.6}
+  h1{font-family:"Zen Maru Gothic",sans-serif;font-size:28px;margin:8px 0}
+  .wrap{max-width:640px;margin:0 auto;padding:24px 16px 40px}
+  .lead{color:#5b6770}
+  .big{display:block;width:100%;padding:18px;border:0;border-radius:14px;background:var(--accent);color:#fff;font:700 18px "Zen Maru Gothic",sans-serif;margin:16px 0;cursor:pointer}
+  .big[disabled]{background:#9aa3a8}
+  .note{font-size:13px;color:#5b6770}
+  ol{padding-left:1.3em}
+  /* AR overlay */
+  #ov{position:fixed;inset:0;display:none;pointer-events:none;font-family:"Zen Maru Gothic","Noto Sans JP",sans-serif}
+  #ov.on{display:block}
+  #msg{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));left:0;right:0;text-align:center;padding:0 12px}
+  #msg b{display:inline-block;background:rgba(255,255,255,.92);color:#1c2733;border-radius:14px;padding:6px 16px;font-size:24px;font-weight:900}
+  #msg span{display:block;margin-top:6px}
+  #msg span i{display:inline-block;font-style:normal;background:rgba(255,255,255,.85);border-radius:12px;padding:4px 12px;font-size:17px;font-weight:700}
+  #foot{position:absolute;bottom:calc(120px + env(safe-area-inset-bottom,0px));left:0;right:0;text-align:center}
+  #foot i{display:inline-block;font-style:normal;background:rgba(200,53,46,.9);color:#fff;border-radius:12px;padding:6px 14px;font-size:16px;font-weight:700}
+  #hint{position:absolute;top:50%;left:0;right:0;text-align:center;transform:translateY(-50%)}
+  #hint i{display:inline-block;font-style:normal;background:rgba(31,111,139,.9);color:#fff;border-radius:12px;padding:8px 16px;font-size:16px;font-weight:700}
+  #bar{position:absolute;left:0;right:0;bottom:0;padding:8px 10px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;pointer-events:auto;background:linear-gradient(transparent,rgba(0,0,0,.5))}
+  #bar .lv{display:flex;gap:5px}
+  #bar .lv button{flex:1;padding:11px 0;border-radius:9px;border:0;background:rgba(255,255,255,.9);color:#1c2733;font:700 14px "Zen Maru Gothic",sans-serif}
+  #bar .lv button[aria-pressed="true"]{background:var(--warn)}
+  #bar .tl{display:flex;gap:5px}
+  #bar .tl button{flex:1;padding:8px 0;border-radius:9px;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.4);color:#fff;font:600 12px "Noto Sans JP",sans-serif}
+  #bar .tl button[aria-pressed="true"]{background:rgba(255,255,255,.9);color:#1c2733}
+  #ov.nobar #bar{display:none}
+  #top{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));left:10px;right:10px;display:flex;justify-content:space-between;pointer-events:auto}
+  #top button{border:0;border-radius:999px;padding:7px 12px;background:rgba(0,0,0,.45);color:#fff;font:700 12px "Noto Sans JP",sans-serif}
+</style>
+</head>
+<body>
+<div class="wrap" id="home">
+  <div class="note">大分地方気象台 お天気フェア ・ Android版（WebXR）</div>
+  <h1>まちの水位スコープ</h1>
+  <p class="lead">AndroidのChromeで動くAR版です。歩いても位置が合い、奥行きセンサーが使える機種では本物のコーンや机が正しく水に沈んで見えます。1眼ゴーグルに入れて使えます。</p>
+  <p>通路の幅：<label><input type="radio" name="w" value="1.2"> 1.2m</label>　<label><input type="radio" name="w" value="1.5" checked> 1.5m</label></p>
+  <button class="big" id="startBtn" disabled>確認中…</button>
+  <p id="support" class="note"></p>
+  <ol>
+    <li>入口の立ち位置に立ち、通路の奥を向いて「ARをはじめる」。</li>
+    <li>床に白い輪が出たら、自分の足元の床をタップ。そこが通路の入口になり、向いている方向が通路の奥になります。</li>
+    <li>画面下のボタン（またはタップ）で水位を上げる。「車」で車が走ってきます。</li>
+  </ol>
+  <p class="note">動作条件：ARCore対応のAndroid端末＋Chrome。https のページとして開く必要があります。カメラ映像はどこにも送信・保存されません。</p>
+</div>
+
+<div id="ov">
+  <div id="top"><button id="exitBtn">← 終了</button><button id="barBtn">ボタンをかくす</button><button id="reBtn">置き直す</button></div>
+  <div id="msg"><b id="mT">あめが ふりはじめた</b><span><i id="mS">マンホールと みぞ（側溝）が 見えているね</i></span></div>
+  <div id="hint"><i id="hintT">足元の床を タップして 通路の入口を決める</i></div>
+  <div id="foot"><i id="fT" hidden></i></div>
+  <div id="bar">
+    <div class="lv" id="lv"></div>
+    <div class="tl">
+      <button id="carBtn">🚗 車</button>
+      <button id="revealBtn" aria-pressed="false">見える化</button>
+      <button id="occBtn" aria-pressed="true">奥行き</button>
+      <button id="lockBtn" aria-pressed="false">タップ無効</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =====================================================================
+   まちの水位スコープ Android版（WebXR / ARCore）
+   ---------------------------------------------------------------------
+   ■ 編集してよいところ：LEVELS（水位の段階）, MSG（言葉）, COR（通路の寸法・側溝・車道・マンホール）,
+     KINDS（浮遊物の種類）。それより下の three.js / WebXR の部分は触らない
+   ■ 置き場所：https のサーバー必須（Firebase Hosting, GitHub Pages など）
+   ■ 動作条件：ARCore 対応 Android + Chrome。奥行き（本物が正しく沈む）は機種依存
+   ===================================================================== */
+(() => {
+  // ================= 設定（ここを編集） =================
+  const LEVELS = [0, 5, 10, 20, 30, 50, 70];
+  const MSG = {
+    0:  ['あめが ふりはじめた', 'マンホールと みぞ（側溝）が 見えているね'],
+    5:  ['みぞから 水が あふれてきた！', '下水道が いっぱいで 流しきれない。これが 内水氾濫'],
+    10: ['水の深さ 10cm', 'くつの中に 水が入る。車は ブレーキが ききにくい'],
+    20: ['水の深さ 20cm', 'マンホールも みぞも 見えない！ こどもは ひざ下'],
+    30: ['水の深さ 30cm', '車の エンジンが とまるかも'],
+    50: ['水の深さ 50cm', 'おとなも 歩くのが むずかしい。車が うき出す'],
+    70: ['水の深さ 70cm', '大人の男の人でも 歩けない。こうなる前に 高いところへ にげよう'],
+  };
+  const COR = { w: 1.5, len: 3.0, gutterX: 0.98, gutterW: 0.22, laneX: -2.0, manhole: { x: 0.25, z: 0.95, r: 0.3 } };
+  const S = { level: 0, placed: false, t: 0, overflowT: 0, murk: 0, reveal: false, occ: true, lock: false, car: null, debris: [], debrisT: 0, mhT: 0 };
+  const $ = id => document.getElementById(id);
+
+  // ---------- 対応確認 ----------
+  const startBtn = $('startBtn'), support = $('support');
+  (async () => {
+    if (!navigator.xr) { startBtn.textContent = 'この端末・ブラウザでは使えません'; support.textContent = 'AndroidのChromeで、https のページとして開いてください。'; return; }
+    const ok = await navigator.xr.isSessionSupported('immersive-ar').catch(() => false);
+    if (!ok) { startBtn.textContent = 'ARに対応していません'; support.textContent = 'ARCore（Google Play開発者サービス(AR)）対応の端末が必要です。'; return; }
+    startBtn.disabled = false; startBtn.textContent = 'ARをはじめる';
+  })();
+
+  // ---------- three.js ----------
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.xr.enabled = true;
+  renderer.domElement.style.position = 'fixed'; renderer.domElement.style.inset = '0';
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.02, 40);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x666655, 1.0));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.5); sun.position.set(1, 3, 1); scene.add(sun);
+
+  // 通路の原点（入口の立ち位置）
+  const cor = new THREE.Group(); cor.visible = false; cor.scale.x = -1; scene.add(cor); // +z が通路の奥、+x が右手
+
+  // レティクル
+  const reticle = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.16, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  reticle.matrixAutoUpdate = false; reticle.visible = false; scene.add(reticle);
+
+  // ---------- 水（シェーダー：濁り・流れ・奥行きによる隠れ） ----------
+  const depthTex = new THREE.DataTexture(new Float32Array(4), 2, 2, THREE.RedFormat, THREE.FloatType);
+  depthTex.minFilter = THREE.NearestFilter; depthTex.magFilter = THREE.NearestFilter;
+  const waterUniforms = {
+    uTime: { value: 0 }, uMurk: { value: 0 }, uLevel: { value: 0 }, uSpread: { value: 0 }, uPuddle: { value: 0 },
+    uGutterX: { value: COR.gutterX }, uDepth: { value: depthTex }, uUseDepth: { value: 0 },
+    uDepthMat: { value: new THREE.Matrix4() }, uVp: { value: new THREE.Vector4(0, 0, 1, 1) },
+  };
+  const waterMat = new THREE.ShaderMaterial({
+    uniforms: waterUniforms, transparent: true, depthWrite: false,
+    vertexShader: `
+      varying vec3 vLocal; varying float vViewZ;
+      void main(){ vLocal = position; vec4 mv = modelViewMatrix * vec4(position,1.0); vViewZ = -mv.z; gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `
+      precision highp float;
+      uniform float uTime, uMurk, uLevel, uSpread, uPuddle, uGutterX, uUseDepth; uniform sampler2D uDepth; uniform mat4 uDepthMat; uniform vec4 uVp;
+      varying vec3 vLocal; varying float vViewZ;
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+      float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y); }
+      void main(){
+        // 奥行きで隠す：本物の方が手前なら描かない
+        if (uUseDepth > 0.5) {
+          vec2 nv = vec2((gl_FragCoord.x - uVp.x) / uVp.z, 1.0 - (gl_FragCoord.y - uVp.y) / uVp.w); // 左上原点・y下向き
+          vec2 duv = (uDepthMat * vec4(nv, 0.0, 1.0)).xy;
+          if (duv.x >= 0.0 && duv.x <= 1.0 && duv.y >= 0.0 && duv.y <= 1.0) {
+            float d = texture2D(uDepth, duv).r;
+            if (d > 0.0 && d < vViewZ - 0.04) discard;
+          }
+        }
+        // 側溝からの広がり（あふれ段階）：x が大きい側（右）から左へ
+        // vLocal は平面ローカル（x: 左右、y: 奥行き）
+        float x = vLocal.x, z = 1.5 - vLocal.y; // 平面は x を左右、-y を奥行きに回してある
+        if (uPuddle > 0.5) {
+          float edge = uGutterX - uSpread + 0.12*sin(z*5.0+uTime*1.2) + 0.08*sin(z*11.0-uTime*0.7);
+          if (x < edge || x > uGutterX + 0.3 || z < -0.6 || z > 3.6) discard;
+        }
+        // 流れ（右→左）と波
+        float n = noise(vec2(x*3.0 + uTime*0.9, z*3.0)) * 0.6 + noise(vec2(x*7.0 + uTime*1.6, z*7.0 + uTime*0.3)) * 0.4;
+        float crest = smoothstep(0.55, 0.75, n);
+        vec3 clear = vec3(0.45, 0.52, 0.42), mud = vec3(0.47, 0.38, 0.22);
+        vec3 col = mix(clear, mud, uMurk);
+        col += crest * 0.18;
+        float a = mix(0.45, 0.8, uMurk) * (0.85 + 0.15*crest);
+        if (uPuddle > 0.5) a *= 0.75;
+        gl_FragColor = vec4(col, a);
+      }`,
+  });
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(24, 24, 1, 1), waterMat);
+  water.rotation.x = -Math.PI / 2; water.position.set(0, 0.001, 1.5); water.renderOrder = 5; water.visible = false;
+  cor.add(water);
+
+  // 側溝（グレーチング）とマンホール（仮想）
+  const gutter = new THREE.Mesh(new THREE.BoxGeometry(COR.gutterW, 0.01, 3.8), new THREE.MeshStandardMaterial({ color: 0x2b2f33 }));
+  gutter.position.set(COR.gutterX + COR.gutterW / 2, 0.005, 1.5); cor.add(gutter);
+  for (let z = -0.3; z < 3.4; z += 0.12) { const b = new THREE.Mesh(new THREE.BoxGeometry(COR.gutterW, 0.012, 0.015), new THREE.MeshStandardMaterial({ color: 0x8e939a })); b.position.set(COR.gutterX + COR.gutterW / 2, 0.008, z); b.userData.grate = true; cor.add(b); }
+  const mh = COR.manhole;
+  const mhHole = new THREE.Mesh(new THREE.CircleGeometry(mh.r, 32).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x6e6a62 }));
+  mhHole.position.set(mh.x, 0.004, mh.z); cor.add(mhHole);
+  const mhLid = new THREE.Mesh(new THREE.CylinderGeometry(mh.r, mh.r, 0.02, 32), new THREE.MeshStandardMaterial({ color: 0x7f7a70 }));
+  mhLid.position.set(mh.x, 0.01, mh.z); cor.add(mhLid);
+  const spout = new THREE.Group(); cor.add(spout);
+  for (let i = 0; i < 14; i++) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.02, 0.6, 5), new THREE.MeshBasicMaterial({ color: 0xf0f5eb, transparent: true, opacity: 0.85 })); st.userData.a = i / 14 * Math.PI * 2; spout.add(st); }
+  spout.visible = false;
+  // 見える化の輪郭
+  const revealRing = new THREE.Mesh(new THREE.RingGeometry(mh.r * 1.1, mh.r * 1.25, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xff5a3c, depthTest: false }));
+  revealRing.position.set(mh.x, 0.02, mh.z); revealRing.renderOrder = 9; revealRing.visible = false; cor.add(revealRing);
+
+  // ---------- 浮遊物 ----------
+  const debrisGroup = new THREE.Group(); cor.add(debrisGroup);
+  function makeDebris(k) {
+    const g = new THREE.Group();
+    const M = (c, o) => new THREE.MeshStandardMaterial(Object.assign({ color: c }, o || {}));
+    if (k === 'bottle') { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.24, 12).rotateZ(Math.PI / 2), M(0xb4dcf0, { transparent: true, opacity: 0.85 })); g.add(b); const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.03, 8).rotateZ(Math.PI / 2), M(0x2a6fb0)); cap.position.x = -0.135; g.add(cap); }
+    else if (k === 'bag') { const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), M(0x2f3438)); b.scale.set(1.3, 0.6, 1); g.add(b); }
+    else if (k === 'can') { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.12, 12).rotateZ(Math.PI / 2), M(0xd9d9d9, { metalness: 0.6, roughness: 0.4 })); g.add(b); }
+    else if (k === 'branch') { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.025, 0.6, 6).rotateZ(Math.PI / 2), M(0x6b4a2b)); g.add(b); const t = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.22, 5), M(0x6b4a2b)); t.position.set(0.1, 0.08, 0); t.rotation.z = -0.6; g.add(t); }
+    else if (k === 'bucket') { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.11, 0.26, 16, 1, true), M(0x3c8fd6, { side: THREE.DoubleSide })); b.rotation.z = 1.2; g.add(b); }
+    else { const b = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.2, 0.28), M(0xf3f3ee)); g.add(b); }
+    return g;
+  }
+  const KINDS = ['bottle', 'bag', 'can', 'branch', 'bucket', 'bottle', 'foam'];
+  function spawnDebris() {
+    const k = KINDS[Math.floor(Math.random() * KINDS.length)];
+    const m = makeDebris(k);
+    m.position.set(COR.gutterX + 0.4 + Math.random() * 0.6, 0, 0.4 + Math.random() * 2.6);
+    m.rotation.y = Math.random() * 6.28;
+    m.userData = { v: 0.25 + Math.random() * 0.15, ph: Math.random() * 6.28 };
+    debrisGroup.add(m); S.debris.push(m);
+  }
+  function updateDebris(dt, lvl) {
+    if (lvl >= 0.1) { S.debrisT += dt; if (S.debrisT > 1.6 && S.debris.length < 10) { S.debrisT = 0; spawnDebris(); } }
+    S.debris.forEach(m => { m.position.x -= m.userData.v * dt; m.position.y = lvl + 0.02 * Math.sin(S.t * 2 + m.userData.ph); m.rotation.y += dt * 0.3; m.rotation.z = 0.05 * Math.sin(S.t * 1.7 + m.userData.ph); });
+    S.debris = S.debris.filter(m => { if (m.position.x < COR.laneX - 0.5 || lvl < 0.1) { debrisGroup.remove(m); return false; } return true; });
+  }
+
+  // ---------- 車 ----------
+  const car = new THREE.Group(); cor.add(car); car.visible = false;
+  {
+    const M = c => new THREE.MeshStandardMaterial({ color: c });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.55, 4.0), M(0xd84a3a)); body.position.y = 0.55; car.add(body);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 2.0), M(0xd84a3a)); cab.position.set(0, 1.05, -0.2); car.add(cab);
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.4, 1.9), M(0xb9d6e8)); glass.position.set(0, 1.08, -0.2); car.add(glass);
+    [[-0.75, 1.3], [0.75, 1.3], [-0.75, -1.3], [0.75, -1.3]].forEach(([x, z]) => { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.22, 16).rotateZ(Math.PI / 2), M(0x1c1f22)); w.position.set(x, 0.32, z); car.add(w); });
+    const hl = new THREE.MeshBasicMaterial({ color: 0xfff7b0 });
+    car.userData.lights = [[-0.55, 0.62, 2.01], [0.55, 0.62, 2.01]].map(p => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.14, 0.02), hl.clone()); l.position.set(...p); car.add(l); return l; });
+    car.userData.hz = [[-0.82, 0.62, 2.01], [0.82, 0.62, 2.01]].map(p => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.02), new THREE.MeshBasicMaterial({ color: 0xff9a1f })); l.position.set(...p); l.visible = false; car.add(l); return l; });
+    const sp = new THREE.Group(); car.add(sp); car.userData.spray = sp;
+    for (let i = 0; i < 24; i++) { const d = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 })); sp.add(d); }
+  }
+  function startCar() { S.car = { t0: S.t, stalled: false, stallT: 0, floatT: 0 }; car.visible = true; }
+  function updateCar(dt, lvl) {
+    if (!S.car) return;
+    const age = S.t - S.car.t0;
+    if (!S.car.stalled && (age > 6 || (lvl >= 0.3 && age > 3.2))) { S.car.stalled = true; S.car.stallT = S.t; }
+    if (S.car.stalled && lvl >= 0.5) S.car.floatT += dt;
+    if (age > 60) { S.car = null; car.visible = false; return; }
+    const startZ = 14, stopZ = 3.2, u = Math.min(1, age / 6), ease = 1 - Math.pow(1 - u, 3);
+    let z = startZ + (stopZ - startZ) * ease; if (S.car.stalled) z = Math.min(z, Math.max(stopZ, z));
+    let y = 0, x = COR.laneX, roll = 0;
+    if (S.car.floatT > 0) { y = Math.min(0.15, S.car.floatT * 0.05) + 0.03 * Math.sin(S.t * 1.5); x += Math.sin(S.car.floatT * 0.4) * 0.3; roll = 0.05 * Math.sin(S.t * 1.2); }
+    car.position.set(x, y, z); car.rotation.set(0, Math.PI, roll);
+    const moving = !S.car.stalled;
+    car.userData.lights.forEach(l => l.material.color.set(moving ? 0xfff7b0 : 0x8a8560));
+    const blink = S.car.stalled && Math.floor((S.t - S.car.stallT) * 2) % 2 === 0;
+    car.userData.hz.forEach(l => l.visible = blink);
+    const sp = car.userData.spray; sp.visible = moving && lvl > 0;
+    if (sp.visible) { const k = 1 - ease; sp.children.forEach((d, i) => { const t = (S.t * 3 + i * 0.13) % 1, sg = i % 2 ? 1 : -1; d.position.set(sg * (0.8 + (0.5 + 0.6 * k) * t), lvl + (0.25 + 0.55 * k) * Math.sin(t * Math.PI) * (0.6 + 0.4 * ((i * 7) % 5) / 5) - y, 1.2 - t * 1.5); }); }
+  }
+
+  // ---------- 状態の反映 ----------
+  const lvDiv = $('lv');
+  LEVELS.forEach(l => { const b = document.createElement('button'); b.id = 'lv' + l; b.textContent = l === 0 ? '0' : l === 5 ? 'あふれ' : l; b.addEventListener('click', () => setLevel(l)); lvDiv.appendChild(b); });
+  function setLevel(l) {
+    const prev = S.level; S.level = l;
+    LEVELS.forEach(x => $('lv' + x).setAttribute('aria-pressed', String(x === l)));
+    $('mT').textContent = MSG[l][0]; $('mS').textContent = MSG[l][1];
+    if (l === 5 && prev !== 5) S.overflowT = 0;
+    if (l >= 20 && prev < 20) S.mhT = S.t;
+    if (l === 0) { S.mhT = 0; S.murk = 0; S.debris.forEach(m => debrisGroup.remove(m)); S.debris = []; S.car = null; car.visible = false; }
+    const f = $('fT');
+    if (S.car && S.car.stalled) { f.hidden = false; f.textContent = '水の深さ30cmで 車の エンジンが とまった'; }
+    else if (l >= 20 && l < 70) { f.hidden = false; f.textContent = 'かさや ぼうで 足もとを たしかめよう'; }
+    else if (l >= 70) { f.hidden = false; f.textContent = 'こうなる前に にげるのが 大切'; }
+    else f.hidden = true;
+  }
+  function nextLevel() { const i = LEVELS.indexOf(S.level); if (i < LEVELS.length - 1) setLevel(LEVELS[i + 1]); }
+  function prevLevel() { const i = LEVELS.indexOf(S.level); if (i > 0) setLevel(LEVELS[i - 1]); }
+  $('carBtn').addEventListener('click', startCar);
+  $('revealBtn').addEventListener('click', e => { S.reveal = !S.reveal; e.target.setAttribute('aria-pressed', String(S.reveal)); });
+  $('occBtn').addEventListener('click', e => { S.occ = !S.occ; e.target.setAttribute('aria-pressed', String(S.occ)); });
+  $('lockBtn').addEventListener('click', e => { S.lock = !S.lock; e.target.setAttribute('aria-pressed', String(S.lock)); });
+  $('barBtn').addEventListener('click', e => { const off = $('ov').classList.toggle('nobar'); e.target.textContent = off ? 'ボタンを出す' : 'ボタンをかくす'; });
+  $('reBtn').addEventListener('click', () => { S.placed = false; cor.visible = false; $('hint').hidden = false; });
+  window.addEventListener('keydown', e => {
+    const k = e.key; let hit = true;
+    if (k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'Enter') nextLevel();
+    else if (k === 'ArrowLeft' || k === 'PageUp') prevLevel();
+    else if (k === 'Home' || k === '0') setLevel(0);
+    else if (k >= '1' && k <= '7') setLevel(LEVELS[+k - 1]);
+    else if (k === 'c' || k === 'C') startCar();
+    else if (k === 'b' || k === 'B' || k === '.') $('revealBtn').click();
+    else hit = false;
+    if (hit) e.preventDefault();
+  });
+
+  // ---------- XRセッション ----------
+  let session = null, refSpace = null, viewerSpace = null, hitSource = null, depthOK = false;
+  function applyWidth(w) {
+    COR.w = w; COR.gutterX = w / 2 + 0.23; COR.laneX = -(w / 2 + 1.25);
+    waterUniforms.uGutterX.value = COR.gutterX;
+    gutter.position.x = COR.gutterX + COR.gutterW / 2;
+    cor.children.forEach(o => { if (o.userData.grate) o.position.x = COR.gutterX + COR.gutterW / 2; });
+  }
+  startBtn.addEventListener('click', async () => {
+    applyWidth(+document.querySelector('input[name=w]:checked').value);
+    try {
+      session = await navigator.xr.requestSession('immersive-ar', {
+        requiredFeatures: ['hit-test', 'local-floor'],
+        optionalFeatures: ['dom-overlay', 'depth-sensing'],
+        domOverlay: { root: $('ov') },
+        depthSensing: { usagePreference: ['cpu-optimized', 'gpu-optimized'], dataFormatPreference: ['luma-alpha', 'float32'] },
+      });
+    } catch (e) { support.textContent = 'ARを開始できませんでした：' + e.message; return; }
+    $('home').style.display = 'none'; $('ov').classList.add('on'); document.body.appendChild(renderer.domElement);
+    renderer.xr.setReferenceSpaceType('local-floor');
+    await renderer.xr.setSession(session);
+    refSpace = renderer.xr.getReferenceSpace();
+    viewerSpace = await session.requestReferenceSpace('viewer');
+    hitSource = await session.requestHitTestSource({ space: viewerSpace });
+    depthOK = !!(session.depthUsage);
+    $('occBtn').textContent = depthOK ? '奥行き' : '奥行きなし';
+    session.addEventListener('end', () => { $('ov').classList.remove('on'); $('home').style.display = ''; renderer.domElement.remove(); session = null; S.placed = false; cor.visible = false; setLevel(0); });
+    session.addEventListener('select', onSelect);
+    setLevel(0); S.placed = false; $('hint').hidden = false;
+    renderer.setAnimationLoop(render);
+  });
+  $('exitBtn').addEventListener('click', () => { if (session) session.end(); });
+
+  function onSelect() {
+    if (!S.placed) {
+      if (!reticle.visible) return;
+      // 通路の入口＝レティクル位置。向き＝カメラの向き（水平）
+      const pos = new THREE.Vector3().setFromMatrixPosition(reticle.matrix);
+      const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); dir.y = 0; dir.normalize();
+      cor.position.copy(pos); cor.rotation.set(0, Math.atan2(dir.x, dir.z), 0); // ローカル+zが向いている方向
+      cor.visible = true; S.placed = true; $('hint').hidden = true;
+      return;
+    }
+    if (!S.lock) nextLevel();
+  }
+
+  let last = 0;
+  function render(time, frame) {
+    const dt = Math.min(0.1, (time - last) / 1000 || 0); last = time; S.t += dt;
+    const lvlRaw = S.level === 5 ? 0.05 : S.level / 100, lvl = lvlRaw;
+    if (S.level === 5) S.overflowT += dt;
+    if (S.level >= 10) S.murk = Math.min(1, S.murk + dt / 20);
+
+    if (frame) {
+      // ヒットテスト
+      if (!S.placed && hitSource) {
+        const hits = frame.getHitTestResults(hitSource);
+        if (hits.length) { const pose = hits[0].getPose(refSpace); reticle.visible = true; reticle.matrix.fromArray(pose.transform.matrix); }
+        else reticle.visible = false;
+      } else reticle.visible = false;
+      // 奥行き
+      let used = 0;
+      if (depthOK && S.occ) {
+        try {
+          const pose = frame.getViewerPose(refSpace);
+          if (pose) {
+            const view = pose.views[0];
+            const di = frame.getDepthInformation(view);
+            if (di && di.data) {
+              const w = di.width, h = di.height;
+              if (depthTex.image.width !== w || depthTex.image.height !== h) { depthTex.image = { data: new Float32Array(w * h), width: w, height: h }; }
+              const src = session.depthDataFormat === 'float32' ? new Float32Array(di.data) : new Uint16Array(di.data), dst = depthTex.image.data, k = di.rawValueToMeters;
+              for (let i = 0; i < w * h; i++) dst[i] = src[i] * k;
+              depthTex.needsUpdate = true;
+              waterUniforms.uDepthMat.value.fromArray(di.normDepthBufferFromNormView.matrix);
+              const vp = session.renderState.baseLayer.getViewport(view);
+              waterUniforms.uVp.value.set(vp.x, vp.y, vp.width, vp.height);
+              used = 1;
+            }
+          }
+        } catch (e) { used = 0; }
+      }
+      waterUniforms.uUseDepth.value = used;
+    }
+
+    // 水
+    water.visible = S.placed && S.level > 0;
+    water.position.y = (S.level === 5 ? 0.003 : lvl);
+    waterUniforms.uTime.value = S.t; waterUniforms.uMurk.value = S.murk; waterUniforms.uLevel.value = lvl;
+    waterUniforms.uPuddle.value = S.level === 5 ? 1 : 0; waterUniforms.uSpread.value = Math.min(3.4, 0.1 + S.overflowT * 0.28);
+    // マンホール
+    const popped = S.mhT > 0;
+    mhHole.material.color.set(popped ? 0x0d0f11 : 0x6e6a62);
+    mhLid.position.set(popped ? mh.x + mh.r * 1.5 : mh.x, 0.01, popped ? mh.z + 0.1 : mh.z);
+    const age = S.t - S.mhT; spout.visible = popped && age < 4;
+    if (spout.visible) spout.children.forEach((st, i) => { const hgt = (0.3 + 0.5 * Math.sin(age * 3 + i)) * (1 - age / 4); st.scale.y = Math.max(0.05, hgt / 0.6); st.position.set(mh.x + Math.cos(st.userData.a) * mh.r * 0.6, hgt / 2, mh.z + Math.sin(st.userData.a) * mh.r * 0.6); st.rotation.z = Math.cos(st.userData.a) * 0.4; st.rotation.x = -Math.sin(st.userData.a) * 0.4; });
+    revealRing.visible = S.reveal && S.placed;
+    updateDebris(dt, lvl); updateCar(dt, lvl);
+    const f = $('fT'); if (S.car && S.car.stalled && S.level < 70 && f.hidden) { f.hidden = false; f.textContent = '水の深さ30cmで 車の エンジンが とまった'; }
+    renderer.render(scene, camera);
+  }
+})();
+</script>
+</body>
+</html>
