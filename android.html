@@ -385,14 +385,21 @@
   }
   startBtn.addEventListener('click', async () => {
     applyWidth(+document.querySelector('input[name=w]:checked').value);
-    try {
-      session = await navigator.xr.requestSession('immersive-ar', {
-        requiredFeatures: ['hit-test', 'local-floor'],
-        optionalFeatures: ['dom-overlay', 'depth-sensing'],
-        domOverlay: { root: $('ov') },
-        depthSensing: { usagePreference: ['cpu-optimized', 'gpu-optimized'], dataFormatPreference: ['luma-alpha', 'float32'] },
-      });
-    } catch (e) { support.textContent = 'ARを開始できませんでした：' + e.message; return; }
+    // 奥行きの指定はブラウザの版で名前が違うので、順に試す（最後は奥行きなし）
+    const tries = [
+      { depthSensing: { usagePreference: ['cpu-optimized', 'gpu-optimized'], dataFormatPreference: ['unsigned-short', 'float32'] } },
+      { depthSensing: { usagePreference: ['cpu-optimized', 'gpu-optimized'], dataFormatPreference: ['luminance-alpha', 'float32'] } },
+      { depthSensing: { usagePreference: ['cpu-optimized', 'gpu-optimized'], dataFormatPreference: ['luma-alpha', 'float32'] } },
+      null,
+    ];
+    let lastErr = null; session = null;
+    for (const t of tries) {
+      const init = { requiredFeatures: ['hit-test', 'local-floor'], optionalFeatures: ['dom-overlay'], domOverlay: { root: $('ov') } };
+      if (t) { init.optionalFeatures.push('depth-sensing'); init.depthSensing = t.depthSensing; }
+      try { session = await navigator.xr.requestSession('immersive-ar', init); break; }
+      catch (e) { lastErr = e; }
+    }
+    if (!session) { support.textContent = 'ARを開始できませんでした：' + (lastErr && lastErr.message); return; }
     $('home').style.display = 'none'; $('ov').classList.add('on'); document.body.appendChild(renderer.domElement);
     renderer.xr.setReferenceSpaceType('local-floor');
     await renderer.xr.setSession(session);
