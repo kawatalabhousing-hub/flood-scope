@@ -39,13 +39,14 @@
   /* AR overlay */
   #ov{position:fixed;inset:0;display:none;pointer-events:none;font-family:"Zen Maru Gothic","Noto Sans JP",sans-serif}
   #ov.on{display:block}
-  #msg{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));left:0;right:0;text-align:center;padding:0 12px}
+  #msg{position:absolute;top:calc(46px + env(safe-area-inset-top,0px));left:0;right:0;text-align:center;padding:0 12px}
   #msg b{display:inline-block;background:rgba(255,255,255,.92);color:#1c2733;border-radius:14px;padding:6px 18px;font-size:26px;font-weight:900}
   #msg span{display:block;margin-top:6px}
   #msg span i{display:inline-block;font-style:normal;background:rgba(255,255,255,.88);border-radius:12px;padding:5px 14px;font-size:18px;font-weight:700}
   #foot{position:absolute;bottom:calc(70px + env(safe-area-inset-bottom,0px));left:0;right:0;text-align:center}
   #ov.nobar #foot{bottom:calc(40px + env(safe-area-inset-bottom,0px))}
   #foot i{display:inline-block;font-style:normal;background:rgba(200,53,46,.9);color:#fff;border-radius:12px;padding:6px 16px;font-size:17px;font-weight:700}
+  #rain{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   #hint{position:absolute;top:50%;left:0;right:0;text-align:center;transform:translateY(-50%)}
   #hint i{display:inline-block;font-style:normal;background:rgba(31,111,139,.9);color:#fff;border-radius:12px;padding:8px 16px;font-size:16px;font-weight:700}
   #bar{position:absolute;left:0;right:0;bottom:0;padding:8px 10px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;pointer-events:auto;background:linear-gradient(transparent,rgba(0,0,0,.5))}
@@ -56,7 +57,7 @@
   #bar .sl input{flex:1;height:28px}
   #bar .sl span{min-width:3.5em;text-align:right}
   #bar .tl{display:flex;gap:5px;flex-wrap:wrap}
-  #bar .tl button{flex:1 1 40%;padding:10px 0;border-radius:9px;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.4);color:#fff;font:600 13px "Noto Sans JP",sans-serif}
+  #bar .tl button{flex:1 1 22%;padding:10px 0;border-radius:9px;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.4);color:#fff;font:600 13px "Noto Sans JP",sans-serif}
   #bar .tl button[aria-pressed="true"]{background:rgba(255,255,255,.9);color:#1c2733}
   #ov.nobar #bar{display:none}
   #bar .lv,#bar .sl{display:none}   /* 水位は右端の縦スケールで変える */
@@ -80,7 +81,8 @@
   <div class="note">大分地方気象台 お天気フェア ・ Android版（WebXR）</div>
   <h1><span class="tag">【AR体験】</span>しん水スコープ</h1>
   <div class="sub">〜まちの「もしも」にそなえよう！〜</div>
-  <p class="lead">山や川から遠いまちでも、強い雨が下水道で流しきれないと道路に水があふれます（内水氾濫）。のぞくと目の前の通路に水がたまり、足もとの障害物がだんだん見えなくなります。歩いても位置が合い、奥行き対応の機種では本物のコーンや障害物が水面から上だけ見えます。</p>
+  <p class="lead">大雨のとき、まちの水は下水道や用水路に流れていきます。でも、雨が強すぎて流しきれないと、道路に水があふれます。川や山から遠いまちでも起きる「内水氾濫（ないすいはんらん）」です。</p>
+  <p class="lead">スコープをのぞくと、目の前の通路にどんどん水がたまり、足もとの物が見えなくなります。どこまでなら歩ける？ いつにげる？ 体験して考えてみよう。</p>
 
   <div class="step"><span class="num">1</span><h2>見かたをえらぶ</h2></div>
   <div class="seg">
@@ -107,8 +109,9 @@
 </div>
 
 <div id="ov">
-  <div id="top"><button id="exitBtn">← 終了</button><button id="barBtn">ボタンをかくす</button></div>
+  <div id="top"><span></span><button id="barBtn">ボタンをかくす</button></div>
   <div id="msg"><b id="mT">あめが ふりはじめた</b><span><i id="mS">まだ 水は たまっていない。足もとが 見えているね</i></span></div>
+  <canvas id="rain"></canvas>
   <div id="hint"><i id="hintT">足元の床を タップして 通路の入口を決める</i></div>
   <div id="foot"><i id="fT" hidden></i></div>
   <div id="gauge" aria-label="水位スケール">
@@ -120,16 +123,10 @@
     <div class="lv" id="lv"></div>
     <div class="sl"><input type="range" id="lvSlider" min="0" max="70" step="1" value="0"><span id="lvVal">0cm</span></div>
     <div class="tl">
-      <button id="opaqueBtn" aria-pressed="false">足元を隠す</button>
-      <button id="moreBtn" aria-pressed="false">設定…</button>
-    </div>
-    <div class="tl" id="more" hidden>
       <button id="sndBtn" aria-pressed="false">音</button>
-      <button id="occBtn" aria-pressed="true">奥行き</button>
-      <button id="refBtn" aria-pressed="true">透け</button>
       <button id="floorUp">床を上げる ▲1cm</button>
       <button id="floorDown">床を下げる ▼1cm</button>
-      <button id="reBtn">置き直す</button>
+      <button id="exitBtn">← 終了</button>
     </div>
   </div>
 </div>
@@ -163,7 +160,7 @@
     70: ['水の ふかさ 70cm', 'おとなの 男の人も 歩けない'],
   };
   // 水の色とにごり。murkFrom〜murkTo（cm）の間で真水→泥水に変わる（「水位に連動」のとき）
-  const WATER = { clear: [0.36, 0.54, 0.56], mud: [0.54, 0.41, 0.24], murkFrom: 10, murkTo: 50 };
+  const WATER = { clear: [0.56, 0.59, 0.58], mud: [0.46, 0.455, 0.385], sky: [0.80, 0.815, 0.81], murkFrom: 5, murkTo: 27 };   // 真水=曇り空を映した明るい灰色、泥水=灰カーキ（佐賀の写真の色）    // 5cmから濁りはじめ、27cmで完全な泥水（20cmで約7割）
   const COR = { w: 1.5, len: 3.0, gutterX: 0.98, gutterW: 0.22, laneX: -2.0, manhole: { x: 0.25, z: 0.95, r: 0.3 } };
   // 3Dモデル（glTF/.glb）。同じフォルダの models/ に置くと簡易形状の代わりに使われる。無ければ簡易形状のまま。
   // size: 実物の大きさ（m）に合わせて自動で拡大縮小する基準（車=全長、その他=いちばん長い辺）。rotY: 向きの補正（度）
@@ -219,7 +216,7 @@
     uObj: { value: Array.from({ length: MAXOBJ }, () => new THREE.Vector4()) }, uObjN: { value: 0 },
     uCar: { value: new THREE.Vector4(0, 0, 0, 0) }, // x, z, 速さ(0..1), 有効
     uCam: { value: null }, uUseCam: { value: 0 }, uCamFlip: { value: 0 }, uOpaque: { value: 0 },
-    uClear: { value: new THREE.Vector3(...WATER.clear) }, uMud: { value: new THREE.Vector3(...WATER.mud) },
+    uClear: { value: new THREE.Vector3(...WATER.clear) }, uMud: { value: new THREE.Vector3(...WATER.mud) }, uSky: { value: new THREE.Vector3(...WATER.sky) },
   };
   const waterMat = new THREE.ShaderMaterial({
     uniforms: waterUniforms, transparent: true, depthWrite: false,
@@ -230,7 +227,7 @@
       precision highp float;
       #define MAXOBJ ${MAXOBJ}
       uniform float uTime, uMurk, uLevel, uSpread, uPuddle, uGutterX, uUseDepth; uniform sampler2D uDepth; uniform mat4 uDepthMat; uniform vec4 uVp;
-      uniform vec3 uCamPos, uSun, uClear, uMud; uniform vec4 uObj[MAXOBJ]; uniform int uObjN; uniform vec4 uCar;
+      uniform vec3 uCamPos, uSun, uClear, uMud, uSky; uniform vec4 uObj[MAXOBJ]; uniform int uObjN; uniform vec4 uCar;
       uniform sampler2D uCam; uniform float uUseCam, uCamFlip, uOpaque;
       varying vec3 vLocal; varying float vViewZ; varying vec3 vWorld;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
@@ -244,10 +241,10 @@
         h += noise(p*11.0 + flow*2.6 + 7.7) * 0.12;
         h += noise(p*23.0 - flow*1.3 + 1.3) * 0.05;
         // 雨の波紋（格子ごとにランダムな時刻で広がる輪）
-        vec2 g = floor(p*4.0); vec2 c = (g + 0.5 + (vec2(hash(g), hash(g+9.0)) - 0.5)*0.8) / 4.0;
-        float t0 = hash(g+3.0)*2.0; float ph = fract((uTime + t0)*0.5);
-        float r = ph*0.35; float d = length(p - c);
-        h += (1.0-ph) * 0.12 * sin((d - r)*90.0) * smoothstep(0.03, 0.0, abs(d - r));
+        vec2 g = floor(p*7.0); vec2 c = (g + 0.5 + (vec2(hash(g), hash(g+9.0)) - 0.5)*0.8) / 7.0;
+        float t0 = hash(g+3.0)*2.0; float ph = fract((uTime + t0)*0.9);
+        float r = ph*0.25; float d = length(p - c);
+        h += (1.0-ph) * 0.2 * sin((d - r)*110.0) * smoothstep(0.025, 0.0, abs(d - r));
         // 浮遊物のまわりの輪
         for (int i = 0; i < MAXOBJ; i++) { if (i >= uObjN) break;
           vec2 op = uObj[i].xy; float dd = length(p - op);
@@ -304,10 +301,19 @@
         }
         float foam = smoothstep(0.78, 0.95, h0);          // 波頭の泡
         col = mix(col, vec3(0.86, 0.88, 0.82), foam*0.7*(1.0-0.5*uMurk));
-        col += vec3(0.9, 0.9, 0.85) * spec * (0.7 + 0.3*uMurk);
-        col += vec3(0.55, 0.60, 0.62) * fres * 0.25;       // 空の映り込み
-        float a = mix(0.40, 0.96, uMurk);            // 真水は透ける／泥水はほぼ不透明
-        a = mix(a, 0.97, fres*0.6);                        // 斜めから見るほど不透明
+        col += vec3(0.9, 0.9, 0.85) * spec * (0.5 + 0.3*uMurk);
+        // 曇り空の照り返し：視線が水面と浅い角度になるほど明るい灰色になる（天井は映さない）
+        float glare = fres * 0.75 + pow(fres, 0.5) * 0.15;
+        col = mix(col, uSky, clamp(glare, 0.0, 0.85));
+        // 雨粒の飛沫と広がる輪（写真の白い点々）
+        { vec2 g2 = floor(p*14.0); vec2 c2 = (g2 + 0.5 + (vec2(hash(g2+5.0), hash(g2+17.0)) - 0.5)*0.7) / 14.0;
+          float t2 = hash(g2+23.0)*3.0; float ph2 = fract((uTime + t2)*1.8);
+          float d2 = length(p - c2); float ring = ph2*0.05;
+          float rg = smoothstep(0.006, 0.0, abs(d2 - ring)) * (1.0 - ph2) * 0.5;
+          float dot2 = smoothstep(0.012, 0.0, d2) * step(ph2, 0.2) * (1.0 - ph2*5.0) * 0.9;
+          col = mix(col, vec3(0.96, 0.97, 0.96), clamp(rg + dot2, 0.0, 1.0)); }
+        float a = mix(0.45, 0.97, uMurk);            // 真水は少し透ける／泥水はほぼ不透明
+        a = mix(a, 0.98, fres*0.7);                        // 斜めから見るほど不透明（照り返し）
         a += foam*0.15;
         if (uPuddle > 0.5) a *= 0.8 * edgeA;
         if (uOpaque > 0.5) { a = 1.0; }   // 足元を完全に隠す設定
@@ -469,7 +475,7 @@
     const pct = S.level / GMAX * 100;
     gFill.style.height = pct + '%'; gKnob.style.top = (100 - pct) + '%'; gKnob.textContent = S.level;
     const m = Math.min(1, Math.max(0, S.murk));
-    const c = [92 + (138 - 92) * m, 138 + (104 - 138) * m, 142 + (62 - 142) * m].map(Math.round);
+    const c = [0, 1, 2].map(i => Math.round((WATER.clear[i] + (WATER.mud[i] - WATER.clear[i]) * m) * 255));
     gFill.style.background = 'rgb(' + c.join(',') + ')';
   }
   function gaugeLevelFromY(clientY) {
@@ -485,18 +491,14 @@
   const gEnd = e => { gDrag = false; gKnob.classList.remove('drag'); gFill.classList.remove('drag'); };
   gauge.addEventListener('pointerup', gEnd); gauge.addEventListener('pointercancel', gEnd);
 
-  $('occBtn').addEventListener('click', e => { S.occ = !S.occ; e.target.setAttribute('aria-pressed', String(S.occ)); });
-  $('moreBtn').addEventListener('click', e => { const m = $('more'); m.hidden = !m.hidden; e.target.setAttribute('aria-pressed', String(!m.hidden)); });
   let floorOff = 0; try { floorOff = +localStorage.getItem('floorOff') || 0; } catch (e) {}
   function nudgeFloor(d) { floorOff += d; try { localStorage.setItem('floorOff', String(floorOff)); } catch (e) {} if (S.placed) cor.position.y = S.floorY + floorOff; $('hintT').textContent = '床の高さ補正 ' + (floorOff * 100).toFixed(0) + 'cm'; $('hint').hidden = false; clearTimeout(nudgeFloor.t); nudgeFloor.t = setTimeout(() => { $('hint').hidden = true; }, 1200); }
   $('floorUp').addEventListener('click', () => nudgeFloor(0.01));
   $('floorDown').addEventListener('click', () => nudgeFloor(-0.01));
   const MURK_NAME = { level: '連動', clear: '真水', mud: '泥水', auto: '自動' };
   function setMurkMode(m) { S.murkMode = m; }
-  function setOpaque(on) { S.opaque = on; $('opaqueBtn').setAttribute('aria-pressed', String(on)); }
-  $('opaqueBtn').addEventListener('click', () => setOpaque(!S.opaque));
+  function setOpaque(on) { S.opaque = on; }
   $('sndBtn').addEventListener('click', e => { S.sound = !S.sound; e.target.setAttribute('aria-pressed', String(S.sound)); if (S.sound) snd.start(); else snd.stop(); });
-  $('refBtn').addEventListener('click', e => { S.refract = !S.refract; e.target.setAttribute('aria-pressed', String(S.refract)); });
   // ---------- 音（雨・流れ・湧き出し・車） ----------
   const snd = (() => {
     let ac = null, rain = null, flow = null, flowGain = null, bub = null, bubGain = null, eng = null, engGain = null, tick = 0;
@@ -505,7 +507,7 @@
     return {
       start() {
         const a = ctxInit();
-        if (!rain) { rain = noise(a); const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 0.6; const g = a.createGain(); g.gain.value = 0.10; rain.connect(f).connect(g).connect(a.destination); rain.start(); }
+        if (!rain) { rain = noise(a); const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 0.6; const g = a.createGain(); g.gain.value = 0.06; rain.connect(f).connect(g).connect(a.destination); rain.start(); }
         if (!flow) { flow = noise(a); const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900; flowGain = a.createGain(); flowGain.gain.value = 0; flow.connect(f).connect(flowGain).connect(a.destination); flow.start(); }
         if (!bub) { bub = noise(a); const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400; bubGain = a.createGain(); bubGain.gain.value = 0; bub.connect(f).connect(bubGain).connect(a.destination); bub.start(); }
       },
@@ -527,7 +529,6 @@
     };
   })();
   $('barBtn').addEventListener('click', e => { const off = $('ov').classList.toggle('nobar'); e.target.textContent = off ? 'ボタンを出す' : 'ボタンをかくす'; });
-  $('reBtn').addEventListener('click', () => { S.placed = false; cor.visible = false; $('hint').hidden = false; });
   window.addEventListener('keydown', e => {
     const k = e.key; let hit = true;
     if (k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'Enter') nextLevel();
@@ -572,8 +573,8 @@
   }
   startBtn.addEventListener('click', async () => {
     applyWidth(+document.querySelector('input[name=w]:checked').value);
-    S.refract = $('optRefract').checked; $('refBtn').setAttribute('aria-pressed', String(S.refract));
-    S.occ = $('optOcc').checked; $('occBtn').setAttribute('aria-pressed', String(S.occ));
+    S.refract = $('optRefract').checked;
+    S.occ = $('optOcc').checked;
     setMurkMode($('optMurk').value); setOpaque($('optOpaque').checked);
     S.sound = $('optSound').checked; $('sndBtn').setAttribute('aria-pressed', String(S.sound)); if (S.sound) snd.start();
     const goggle = document.querySelector('input[name=view]:checked').value === 'goggle';
@@ -614,7 +615,6 @@
     catch (e) { hitSource = await session.requestHitTestSource({ space: viewerSpace }); }
     depthOK = !!(session.depthUsage);
     try { glBinding = new XRWebGLBinding(session, renderer.getContext()); } catch (e) { glBinding = null; }
-    $('occBtn').textContent = depthOK ? '奥行き' : '奥行きなし';
     session.addEventListener('end', () => { $('ov').classList.remove('on'); $('home').style.display = ''; renderer.domElement.remove(); session = null; S.placed = false; cor.visible = false; setLevel(0); });
     session.addEventListener('select', onSelect);
     setLevel(0); S.placed = false; $('hint').hidden = false;
@@ -638,9 +638,29 @@
     // 水位はボタン（またはスタッフのPC）だけで変える。画面タップでは変えない
   }
 
+  // ---------- 雨の筋（画面に重ねる2Dキャンバス） ----------
+  const rainCv = $('rain'), rctx = rainCv.getContext('2d');
+  function drawRain() {
+    const W = rainCv.clientWidth, H = rainCv.clientHeight; if (!W || !H) return;
+    if (rainCv.width !== W || rainCv.height !== H) { rainCv.width = W; rainCv.height = H; }
+    rctx.clearRect(0, 0, W, H);
+    rctx.lineWidth = 1.1; rctx.strokeStyle = 'rgba(225,232,240,0.42)'; rctx.beginPath();
+    for (let i = 0; i < 140; i++) {
+      const sp = 0.8 + (i % 4) * 0.15, len = 16 + (i % 3) * 8;
+      const x = (((i * 97.3 - S.t * 160 * (0.5 + (i % 3) * 0.3)) % W) + W) % W;
+      const y = ((i * 53.7 + S.t * 950 * sp) % (H + 60)) - 30;
+      rctx.moveTo(x, y); rctx.lineTo(x - len * 0.35, y + len);
+    }
+    rctx.stroke();
+    rctx.lineWidth = 2; rctx.strokeStyle = 'rgba(235,240,246,0.35)'; rctx.beginPath();
+    for (let i = 0; i < 24; i++) { const x = (((i * 211.7 - S.t * 200) % W) + W) % W, y = ((i * 131.3 + S.t * 1300) % (H + 80)) - 40; rctx.moveTo(x, y); rctx.lineTo(x - 10, y + 30); }
+    rctx.stroke();
+  }
+
   let last = 0;
   function render(time, frame) {
     const dt = Math.min(0.1, (time - last) / 1000 || 0); last = time; S.t += dt;
+    drawRain();
     const lvlRaw = S.level === 5 ? 0.05 : S.level / 100, lvl = lvlRaw;
     if (S.level === 5) S.overflowT += dt;
     if (S.murkMode === 'level') { const t = Math.max(0, Math.min(1, (S.level - WATER.murkFrom) / (WATER.murkTo - WATER.murkFrom))); S.murk += (t - S.murk) * Math.min(1, dt * 1.5); }

@@ -135,7 +135,8 @@
   <div class="eyebrow">大分地方気象台 お天気フェア</div>
   <h1><span class="tag">【AR体験】</span>しん水スコープ</h1>
   <div class="sub">〜まちの「もしも」にそなえよう！〜</div>
-  <p class="lead">山や川から遠いまちでも、強い雨が下水道で流しきれないと道路に水があふれます（内水氾濫）。のぞくと目の前の通路に水がたまり、足もとの障害物がだんだん見えなくなります。</p>
+  <p class="lead">大雨のとき、まちの水は下水道や用水路に流れていきます。でも、雨が強すぎて流しきれないと、道路に水があふれます。川や山から遠いまちでも起きる「内水氾濫（ないすいはんらん）」です。</p>
+  <p class="lead">スコープをのぞくと、目の前の通路にどんどん水がたまり、足もとの物が見えなくなります。どこまでなら歩ける？ いつにげる？ 体験して考えてみよう。</p>
 
   <input type="number" id="heightIn" hidden value="150">
   <h2>見かたをえらぶ</h2>
@@ -270,7 +271,7 @@
   <video id="cam" playsinline muted autoplay></video>
   <canvas id="cv"></canvas>
   <div id="topbar">
-    <button id="exitBtn">← もどる</button>
+    <span></span>
     <button id="remoteBadge" hidden>PCから操作中</button>
     <button id="hudBtn">ボタンをかくす</button>
     <button id="sensorBtn">センサーON</button>
@@ -290,9 +291,9 @@
     <div class="tools" id="more" hidden>
       <button id="sndBtn" aria-pressed="false">音</button>
       <button id="camBtn" aria-pressed="false">カメラ</button>
-      <button id="opaqueBtn" aria-pressed="false">足元を隠す</button>
       <button id="autoBtn" aria-pressed="false">▶ 自動</button>
       <button id="calBtn" aria-pressed="false">コーンに合わせる</button>
+      <button id="exitBtn">← もどる</button>
       <button id="revealBtn" aria-pressed="false" hidden>かくれた危険を見る</button>
       <button id="stereoBtn" aria-pressed="false" hidden>ゴーグル表示</button>
     </div>
@@ -338,9 +339,10 @@
   };
   // 水の色とにごり。murkFrom〜murkTo（cm）の間で真水→泥水に変わる（「水位に連動」のとき）
   const WATER = {
-    clear: [92, 138, 142],   // 真水：うすい青緑（透ける）
-    mud:   [138, 104, 62],   // 泥水：茶色（ほぼ不透明）
-    murkFrom: 10, murkTo: 50,
+    clear: [142, 150, 148],  // 真水：曇り空を映した明るい灰色（透ける）
+    mud:   [118, 116, 98],   // 泥水：灰色がかったカーキ（佐賀の写真の色）
+    sky:   [205, 208, 206],  // 水面に映る曇り空の照り返し
+    murkFrom: 5, murkTo: 27,    // 5cmから濁りはじめ、27cmで完全な泥水（20cmで約7割）
   };
   // 画像素材（PNG・背景透明）。同じフォルダの img/ に置くと簡易図形の代わりに描かれる。無ければ簡易図形のまま。
   // w: 実物の幅（m）。車は正面から見た絵、浮遊物は上からやや斜めの絵、ライト消灯/ハザードは無くてもよい
@@ -498,7 +500,7 @@
     const pct = S.level / GMAX * 100;
     gFill.style.height = pct + '%'; gKnob.style.top = (100 - pct) + '%'; gKnob.textContent = S.level;
     const m = Math.min(1, Math.max(0, S.murk));
-    const c = [92 + (138 - 92) * m, 138 + (104 - 138) * m, 142 + (62 - 142) * m].map(Math.round);
+    const c = [0, 1, 2].map(i => Math.round(WATER.clear[i] + (WATER.mud[i] - WATER.clear[i]) * m));
     gFill.style.background = 'rgb(' + c.join(',') + ')';
   }
   function gaugeLevelFromY(clientY) {
@@ -521,10 +523,9 @@
 
   $('stationBtn').addEventListener('click', () => setStation(S.station ? 0 : 1));
   $('moreBtn').addEventListener('click', () => { const m = $('more'); m.hidden = !m.hidden; $('moreBtn').setAttribute('aria-pressed', String(!m.hidden)); });
-  $('opaqueBtn').addEventListener('click', () => setOpaque(!S.opaque));
   const MURK_NAME = { level: '連動', clear: '真水', mud: '泥水', auto: '自動' };
   function setMurkMode(m) { S.murkMode = m; syncDesk(); }
-  function setOpaque(on) { S.opaque = on; $('opaqueBtn').setAttribute('aria-pressed', String(on)); syncDesk(); }
+  function setOpaque(on) { S.opaque = on; syncDesk(); }
   $('sndBtn').addEventListener('click', () => { S.sound = !S.sound; $('sndBtn').setAttribute('aria-pressed', String(S.sound)); if (S.sound) snd.start(); else snd.stop(); });
   $('calBtn').addEventListener('click', () => { S.calib = !S.calib; $('calBtn').setAttribute('aria-pressed', String(S.calib)); $('calPanel').hidden = !S.calib; if (S.calib) calSync(); });
   function calSync() {
@@ -777,13 +778,23 @@
       for (let i = 0; i < 12; i++) { const bx = ox + ((i * 131 + S.t * 30) % vw), by = vh - ((i * 97 + S.t * 90 * (1 + i % 3 * 0.4)) % (vh + 20)); ctx.beginPath(); ctx.arc(bx, by, 4 + i % 4 * 2, 0, Math.PI * 2); ctx.fill(); }
     }
 
-    // 雨
-    ctx.strokeStyle = 'rgba(225,232,240,0.45)'; ctx.lineWidth = 1;
+    // 雨（強い雨：本数を多く、筋を長く）
+    const RAIN_N = 140;
+    ctx.lineWidth = 1.1; ctx.strokeStyle = 'rgba(225,232,240,0.42)';
     ctx.beginPath();
-    for (let i = 0; i < 70; i++) {
-      const x = ox + ((i * 97.3 + S.t * 140 * (0.5 + (i % 3) * 0.3)) % vw);
-      const y = ((i * 53.7 + S.t * 700 * (0.7 + (i % 4) * 0.15)) % (vh + 40)) - 20;
-      ctx.moveTo(x, y); ctx.lineTo(x - 2, y + 14);
+    for (let i = 0; i < RAIN_N; i++) {
+      const sp = 0.8 + (i % 4) * 0.15, len = 16 + (i % 3) * 8;
+      const x = ox + ((((i * 97.3 - S.t * 160 * (0.5 + (i % 3) * 0.3)) % vw) + vw) % vw);
+      const y = ((i * 53.7 + S.t * 950 * sp) % (vh + 60)) - 30;
+      ctx.moveTo(x, y); ctx.lineTo(x - len * 0.35, y + len);
+    }
+    ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(235,240,246,0.35)';
+    ctx.beginPath();
+    for (let i = 0; i < 24; i++) {
+      const x = ox + ((((i * 211.7 - S.t * 200) % vw) + vw) % vw);
+      const y = ((i * 131.3 + S.t * 1300) % (vh + 80)) - 40;
+      ctx.moveTo(x, y); ctx.lineTo(x - 10, y + 30);
     }
     ctx.stroke();
 
@@ -981,12 +992,13 @@
     wg.addColorStop(1, `rgba(${mixc(0, -14)},${mixc(1, -14)},${mixc(2, -12)},${Math.min(0.98, a1 + 0.26 * murk)})`);
     ctx.fillStyle = wg; ctx.fillRect(ox, Math.max(0, horizon), vw, vh);
     // 水面の照り返し（真水ほど明るく光る）
-    const sh = ctx.createLinearGradient(0, Math.max(0, horizon), 0, Math.max(1, horizon) + vh * 0.35);
-    sh.addColorStop(0, `rgba(235,242,238,${0.22 * (1 - 0.6 * murk)})`); sh.addColorStop(1, 'rgba(235,242,238,0)');
-    ctx.fillStyle = sh; ctx.fillRect(ox, Math.max(0, horizon), vw, vh * 0.35);
+    const sk = WATER.sky;
+    const sh = ctx.createLinearGradient(0, Math.max(0, horizon), 0, Math.max(1, horizon) + vh * 0.5);
+    sh.addColorStop(0, `rgba(${sk[0]},${sk[1]},${sk[2]},${0.55 * (1 - 0.25 * murk)})`); sh.addColorStop(0.45, `rgba(${sk[0]},${sk[1]},${sk[2]},${0.18 * (1 - 0.25 * murk)})`); sh.addColorStop(1, `rgba(${sk[0]},${sk[1]},${sk[2]},0)`);
+    ctx.fillStyle = sh; ctx.fillRect(ox, Math.max(0, horizon), vw, vh * 0.5);
     // 泥水：ゆっくり流れるにごりの帯
     if (murk > 0.05) {
-      ctx.fillStyle = `rgba(${WATER.mud[0] + 30},${WATER.mud[1] + 22},${WATER.mud[2] + 10},${0.16 * murk})`;
+      ctx.fillStyle = `rgba(${WATER.mud[0] + 26},${WATER.mud[1] + 24},${WATER.mud[2] + 18},${0.16 * murk})`;
       for (let i = 0; i < 7; i++) {
         const z = -0.3 + i * 0.55 + 0.08 * Math.sin(i * 2.3 + S.t * 0.4);
         const pts = []; for (let k = 0; k <= 12; k++) { const x = 2.8 - 5.6 * k / 12; pts.push([x, lvl + 0.001, z + 0.06 * Math.sin(x * 3 + S.t * 1.1 + i)]); }
@@ -1009,6 +1021,8 @@
         }
         if (open) ctx.stroke();
       }
+      drawReflections(c, lvl);
+      drawSplashes(c, lvl);
       return;
     }
     const ph = (S.t * 0.6) % 1;
@@ -1024,6 +1038,31 @@
         ctx.stroke();
       }
     }
+  }
+
+  // 雨粒が水面に当たる飛沫と輪（写真の白い点々）
+  const hash2 = (a, b) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };
+  function drawSplashes(c, lvl) {
+    const N = 260;
+    for (let i = 0; i < N; i++) {
+      const cyc = Math.floor(S.t * 2.2 + i * 0.37), ph = (S.t * 2.2 + i * 0.37) - cyc;
+      const x = hash2(i, cyc) * 7 - 3.5, z = hash2(i + 999, cyc) * 6.5 - 0.5;
+      const p = c.P(x, lvl, z); if (p.z < 0.2 || p.z > 7) continue;
+      const ppm = c.f / p.z; if (ppm < 20) continue;
+      const fore = Math.max(0.12, Math.min(0.6, (lvl + 0.02 < S.eyeH ? (S.eyeH - lvl) / p.z : 0.3) * 0.9));
+      if (ph < 0.18) { ctx.fillStyle = `rgba(245,248,246,${0.85 - ph * 2})`; ctx.beginPath(); ctx.arc(p.x, p.y - ppm * 0.012 * (1 - ph / 0.18), Math.max(0.8, ppm * 0.006), 0, Math.PI * 2); ctx.fill(); }
+      const r = ppm * (0.01 + ph * 0.05); if (r < 1) continue;
+      ctx.strokeStyle = `rgba(240,244,242,${0.55 * (1 - ph)})`; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(p.x, p.y, r, r * fore, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  // 本物のコーン・バーの暗い鏡像（写真で自転車やポールが水に映る感じ）
+  function drawReflections(c, lvl) {
+    if (lvl <= 0 || lvl >= S.eyeH) return;
+    const col = 'rgba(28,32,32,0.26)';
+    COR.cones.forEach(cn => { if (lvl < COR.coneH) { const r0 = COR.coneR * (1 - lvl / COR.coneH) + 0.02, rt = 0.025, d = COR.coneH - lvl; poly3(c, [[cn.x - r0, lvl, cn.z], [cn.x + r0, lvl, cn.z], [cn.x + rt, lvl - d, cn.z], [cn.x - rt, lvl - d, cn.z]], col); } });
+    if (lvl < COR.barH - 0.03) COR.bars.forEach(([a, b]) => { const A = COR.cones[a], B = COR.cones[b], d0 = COR.barH - 0.03 - lvl, d1 = COR.barH + 0.03 - lvl; poly3(c, [[A.x, lvl - d0, A.z], [B.x, lvl - d0, B.z], [B.x, lvl - d1, B.z], [A.x, lvl - d1, A.z]], col); });
+    COR.cushions.forEach(cu => { if (cu.on && lvl < cu.h) { const w = cu.kind === 'block' ? (cu.w || cu.r * 2) : cu.r * 2 * (1 - lvl / cu.h) + 0.04, d = cu.h - lvl, dz = cu.kind === 'block' ? (cu.d || cu.r * 2) / 2 : 0; poly3(c, [[cu.x - w / 2, lvl, cu.z - dz], [cu.x + w / 2, lvl, cu.z - dz], [cu.x + w / 2 * (cu.kind === 'block' ? 1 : 0.3), lvl - d, cu.z - dz], [cu.x - w / 2 * (cu.kind === 'block' ? 1 : 0.3), lvl - d, cu.z - dz]], col); } });
   }
 
   function drawManhole(c, mh, lvl) {
@@ -1235,7 +1274,7 @@
     return {
       start() {
         const a = ctxInit();
-        if (!rain) { rain = noise(a); const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 0.6; const g = a.createGain(); g.gain.value = 0.10; rain.connect(f).connect(g).connect(a.destination); rain.start(); }
+        if (!rain) { rain = noise(a); const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 0.6; const g = a.createGain(); g.gain.value = 0.06; rain.connect(f).connect(g).connect(a.destination); rain.start(); }
         if (!bub) { bub = noise(a); const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400; bubGain = a.createGain(); bubGain.gain.value = 0; bub.connect(f).connect(bubGain).connect(a.destination); bub.start(); }
       },
       stop() { if (ac) { ac.suspend(); } },
