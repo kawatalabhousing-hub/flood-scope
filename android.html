@@ -210,7 +210,7 @@
   const MAXOBJ = 16;
   const waterUniforms = {
     uTime: { value: 0 }, uMurk: { value: 0 }, uLevel: { value: 0 }, uSpread: { value: 0 }, uPuddle: { value: 0 },
-    uGutterX: { value: COR.gutterX }, uDepth: { value: depthTex }, uUseDepth: { value: 0 },
+    uGutterX: { value: COR.gutterX }, uDepth: { value: depthTex }, uUseDepth: { value: 0 }, uDepthTexel: { value: new THREE.Vector2(1 / 160, 1 / 90) },
     uDepthMat: { value: new THREE.Matrix4() }, uVp: { value: new THREE.Vector4(0, 0, 1, 1) },
     uCamPos: { value: new THREE.Vector3() }, uSun: { value: new THREE.Vector3(0.3, 0.8, -0.5).normalize() },
     uObj: { value: Array.from({ length: MAXOBJ }, () => new THREE.Vector4()) }, uObjN: { value: 0 },
@@ -226,7 +226,7 @@
     fragmentShader: `
       precision highp float;
       #define MAXOBJ ${MAXOBJ}
-      uniform float uTime, uMurk, uLevel, uSpread, uPuddle, uGutterX, uUseDepth; uniform sampler2D uDepth; uniform mat4 uDepthMat; uniform vec4 uVp;
+      uniform float uTime, uMurk, uLevel, uSpread, uPuddle, uGutterX, uUseDepth; uniform sampler2D uDepth; uniform mat4 uDepthMat; uniform vec4 uVp; uniform vec2 uDepthTexel;
       uniform vec3 uCamPos, uSun, uClear, uMud, uSky; uniform vec4 uObj[MAXOBJ]; uniform int uObjN; uniform vec4 uCar;
       uniform sampler2D uCam; uniform float uUseCam, uCamFlip, uOpaque, uHorizon, uReflect;
       varying vec3 vLocal; varying float vViewZ; varying vec3 vWorld;
@@ -258,14 +258,22 @@
         return h;
       }
       void main(){
+        // 本物の物体による隠れ：奥行きマップは粗いので、周囲9点の「隠れている割合」を使って境界をなめらかにする
+        float occ = 0.0;
         if (uUseDepth > 0.5) {
           vec2 nv = vec2((gl_FragCoord.x - uVp.x) / uVp.z, 1.0 - (gl_FragCoord.y - uVp.y) / uVp.w);
           vec2 duv = (uDepthMat * vec4(nv, 0.0, 1.0)).xy;
           if (duv.x >= 0.0 && duv.x <= 1.0 && duv.y >= 0.0 && duv.y <= 1.0) {
-            float d = texture2D(uDepth, duv).r;
-            if (d > 0.0 && d < vViewZ - 0.04) discard;
+            vec2 tx = uDepthTexel * 0.7;
+            for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+              float d = texture2D(uDepth, clamp(duv + vec2(float(i), float(j)) * tx, 0.0, 1.0)).r;
+              // 奥行きの差が小さいところはゆるやかに（水面すれすれの物のちらつきを抑える）
+              occ += (d > 0.0) ? (1.0 - smoothstep(-0.10, -0.02, d - vViewZ)) : 0.0;
+            }
+            occ /= 9.0;
           }
         }
+        if (occ > 0.985) discard;
         float x = vLocal.x, z = 1.5 - vLocal.y;
         vec2 p = vec2(x, z);
         float edgeA = 1.0;
@@ -330,6 +338,10 @@
         a += foam*0.15;
         if (uPuddle > 0.5) a *= 0.8 * edgeA;
         if (uOpaque > 0.5) { a = 1.0; }   // 足元を完全に隠す設定
+        // 物との境界：少し明るい水際の線を入れて、段差をなじませる
+        float edge = smoothstep(0.05, 0.45, occ) * (1.0 - smoothstep(0.45, 0.95, occ));
+        col = mix(col, vec3(0.92, 0.92, 0.88), edge * 0.45);
+        a *= (1.0 - occ);
         gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
       }`,
   });
@@ -520,15 +532,15 @@
     return {
       start() {
         const a = ctxInit();
-        if (!rain) { rain = noise(a); const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 0.6; const g = a.createGain(); g.gain.value = 0.06; rain.connect(f).connect(g).connect(a.destination); rain.start(); }
+        if (!rain) { rain = noise(a); const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 0.6; const g = a.createGain(); g.gain.value = 0.035; rain.connect(f).connect(g).connect(a.destination); rain.start(); }
         if (!flow) { flow = noise(a); const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900; flowGain = a.createGain(); flowGain.gain.value = 0; flow.connect(f).connect(flowGain).connect(a.destination); flow.start(); }
         if (!bub) { bub = noise(a); const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400; bubGain = a.createGain(); bubGain.gain.value = 0; bub.connect(f).connect(bubGain).connect(a.destination); bub.start(); }
       },
       stop() { if (ac) ac.suspend(); },
       update(dt) {
         if (!ac || ac.state !== 'running') return;
-        if (bubGain) bubGain.gain.value = S.level === 5 ? 0.25 + 0.15 * Math.sin(S.t * 7) : (S.level >= 10 ? 0.05 : 0);
-        if (flowGain) flowGain.gain.value = S.level >= 10 ? Math.min(0.22, 0.05 + S.level / 400) * (0.9 + 0.1 * Math.sin(S.t * 0.7)) : 0;
+        if (bubGain) bubGain.gain.value = S.level === 5 ? 0.25 + 0.15 * Math.sin(S.t * 7) : (S.level >= 10 ? 0.03 : 0);
+        if (flowGain) flowGain.gain.value = S.level >= 10 ? Math.min(0.12, 0.03 + S.level / 700) * (0.9 + 0.1 * Math.sin(S.t * 0.7)) : 0;
         if (eng) eng.frequency.value = S.car && !S.car.stalled ? 70 + 40 * Math.sin(S.t * 1.3) : 30;
         if (S.car && S.car.stalled) { tick += dt; if (tick > 0.5) { tick = 0; this.click(); } }
       },
@@ -628,7 +640,7 @@
     catch (e) { hitSource = await session.requestHitTestSource({ space: viewerSpace }); }
     depthOK = !!(session.depthUsage);
     try { glBinding = new XRWebGLBinding(session, renderer.getContext()); } catch (e) { glBinding = null; }
-    session.addEventListener('end', () => { $('ov').classList.remove('on'); $('home').style.display = ''; renderer.domElement.remove(); session = null; S.placed = false; cor.visible = false; setLevel(0); });
+    session.addEventListener('end', () => { snd.stop(); $('ov').classList.remove('on'); $('home').style.display = ''; renderer.domElement.remove(); session = null; S.placed = false; cor.visible = false; setLevel(0); });
     session.addEventListener('select', onSelect);
     setLevel(0); S.placed = false; $('hint').hidden = false;
     renderer.setAnimationLoop(render);
@@ -657,8 +669,8 @@
     const W = rainCv.clientWidth, H = rainCv.clientHeight; if (!W || !H) return;
     if (rainCv.width !== W || rainCv.height !== H) { rainCv.width = W; rainCv.height = H; }
     rctx.clearRect(0, 0, W, H);
-    rctx.lineWidth = 1.1; rctx.strokeStyle = 'rgba(225,232,240,0.42)'; rctx.beginPath();
-    for (let i = 0; i < 140; i++) {
+    rctx.lineWidth = 1; rctx.strokeStyle = 'rgba(225,232,240,0.36)'; rctx.beginPath();
+    for (let i = 0; i < 70; i++) {
       const sp = 0.8 + (i % 4) * 0.15, len = 16 + (i % 3) * 8;
       const x = (((i * 97.3 - S.t * 160 * (0.5 + (i % 3) * 0.3)) % W) + W) % W;
       const y = ((i * 53.7 + S.t * 950 * sp) % (H + 60)) - 30;
@@ -666,7 +678,7 @@
     }
     rctx.stroke();
     rctx.lineWidth = 2; rctx.strokeStyle = 'rgba(235,240,246,0.35)'; rctx.beginPath();
-    for (let i = 0; i < 24; i++) { const x = (((i * 211.7 - S.t * 200) % W) + W) % W, y = ((i * 131.3 + S.t * 1300) % (H + 80)) - 40; rctx.moveTo(x, y); rctx.lineTo(x - 10, y + 30); }
+    for (let i = 0; i < 10; i++) { const x = (((i * 211.7 - S.t * 200) % W) + W) % W, y = ((i * 131.3 + S.t * 1300) % (H + 80)) - 40; rctx.moveTo(x, y); rctx.lineTo(x - 10, y + 30); }
     rctx.stroke();
   }
 
@@ -696,7 +708,7 @@
             const di = frame.getDepthInformation(view);
             if (di && di.data) {
               const w = di.width, h = di.height;
-              if (depthTex.image.width !== w || depthTex.image.height !== h) { depthTex.image = { data: new Float32Array(w * h), width: w, height: h }; }
+              if (depthTex.image.width !== w || depthTex.image.height !== h) { depthTex.image = { data: new Float32Array(w * h), width: w, height: h }; waterUniforms.uDepthTexel.value.set(1 / w, 1 / h); }
               const src = session.depthDataFormat === 'float32' ? new Float32Array(di.data) : new Uint16Array(di.data), dst = depthTex.image.data, k = di.rawValueToMeters;
               for (let i = 0; i < w * h; i++) dst[i] = src[i] * k;
               depthTex.needsUpdate = true;
