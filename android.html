@@ -103,7 +103,7 @@
     <summary>スタッフ用の設定</summary>
     <p class="opts" style="margin-top:8px">通路の幅：<span class="chips"><label><input type="radio" name="w" value="1.2"> 1.2m</label><label><input type="radio" name="w" value="1.5" checked> 1.5m</label></span></p>
     <p class="code-row">操作コード：<input type="text" id="deskCode" inputmode="numeric" maxlength="4" placeholder="4けた" style="font:700 22px 'Zen Maru Gothic',sans-serif;width:6em;padding:6px 10px;border:1px solid var(--line);border-radius:10px;letter-spacing:.15em"> <span class="note">desk.html に出る数字。入れるとスタッフのPCから操作でき、端末のボタンは隠れます。</span></p>
-    <p class="opts"><label>水のにごり：<select id="optMurk"><option value="level" selected>水位に連動（浅いと真水、深いほど泥水）</option><option value="clear">真水で固定</option><option value="mud">泥水で固定</option></select></label><label><input type="checkbox" id="optOpaque"> 足元を完全に見えなくする（水を不透明に）</label><label><input type="checkbox" id="optSound" checked> 音を出す</label><label><input type="checkbox" id="optRefract" checked> 水越しに床が透ける</label><label><input type="checkbox" id="optOcc" checked> 奥行きで本物を沈める</label></p>
+    <p class="opts"><label>水のにごり：<select id="optMurk"><option value="level" selected>水位に連動（浅いと真水、深いほど泥水）</option><option value="clear">真水で固定</option><option value="mud">泥水で固定</option></select></label><label><input type="checkbox" id="optOpaque"> 足元を完全に見えなくする（水を不透明に）</label><label><input type="checkbox" id="optSound" checked> 音を出す</label><label><input type="checkbox" id="optRefract" checked> 水越しに床が透ける</label><label><input type="checkbox" id="optReflect" checked> 水面に景色を映す（映り込み）</label><label><input type="checkbox" id="optOcc" checked> 奥行きで本物を沈める</label></p>
     <p class="note">動作条件：ARCore対応のAndroid端末＋Chrome。https のページとして開く必要があります。カメラ映像はどこにも送信・保存されません。</p>
   </details>
 </div>
@@ -160,7 +160,7 @@
     70: ['水の ふかさ 70cm', 'おとなの 男の人も 歩けない'],
   };
   // 水の色とにごり。murkFrom〜murkTo（cm）の間で真水→泥水に変わる（「水位に連動」のとき）
-  const WATER = { clear: [0.56, 0.59, 0.58], mud: [0.46, 0.455, 0.385], sky: [0.80, 0.815, 0.81], murkFrom: 5, murkTo: 27 };   // 真水=曇り空を映した明るい灰色、泥水=灰カーキ（佐賀の写真の色）    // 5cmから濁りはじめ、27cmで完全な泥水（20cmで約7割）
+  const WATER = { clear: [0.67, 0.64, 0.58], mud: [0.55, 0.46, 0.35], sky: [0.83, 0.80, 0.75], murkFrom: 5, murkTo: 27 };   // 真水=明るいベージュ、泥水=茶色（長ぐつの写真の色）    // 5cmから濁りはじめ、27cmで完全な泥水（20cmで約7割）
   const COR = { w: 1.5, len: 3.0, gutterX: 0.98, gutterW: 0.22, laneX: -2.0, manhole: { x: 0.25, z: 0.95, r: 0.3 } };
   // 3Dモデル（glTF/.glb）。同じフォルダの models/ に置くと簡易形状の代わりに使われる。無ければ簡易形状のまま。
   // size: 実物の大きさ（m）に合わせて自動で拡大縮小する基準（車=全長、その他=いちばん長い辺）。rotY: 向きの補正（度）
@@ -174,7 +174,7 @@
     foam:   { file: 'models/foam.glb',   size: 0.38, rotY: 0 },
     manhole:{ file: 'models/manhole.glb', size: 0.6, rotY: 0 },
   };
-  const S = { floorY: 0, level: 0, placed: false, t: 0, overflowT: 0, murk: 0, reveal: false, occ: true, lock: false, car: null, debris: [], debrisT: 0, mhT: 0, refract: true, sound: false, murkMode: 'level', debrisOn: true, opaque: false, height: 150 };
+  const S = { floorY: 0, level: 0, placed: false, t: 0, overflowT: 0, murk: 0, reveal: false, occ: true, lock: false, car: null, debris: [], debrisT: 0, mhT: 0, refract: true, reflect: true, sound: false, murkMode: 'level', debrisOn: true, opaque: false, height: 150 };
   const $ = id => document.getElementById(id);
 
   // ---------- 対応確認 ----------
@@ -215,7 +215,7 @@
     uCamPos: { value: new THREE.Vector3() }, uSun: { value: new THREE.Vector3(0.3, 0.8, -0.5).normalize() },
     uObj: { value: Array.from({ length: MAXOBJ }, () => new THREE.Vector4()) }, uObjN: { value: 0 },
     uCar: { value: new THREE.Vector4(0, 0, 0, 0) }, // x, z, 速さ(0..1), 有効
-    uCam: { value: null }, uUseCam: { value: 0 }, uCamFlip: { value: 0 }, uOpaque: { value: 0 },
+    uCam: { value: null }, uUseCam: { value: 0 }, uCamFlip: { value: 0 }, uOpaque: { value: 0 }, uHorizon: { value: 0.5 }, uReflect: { value: 1 },
     uClear: { value: new THREE.Vector3(...WATER.clear) }, uMud: { value: new THREE.Vector3(...WATER.mud) }, uSky: { value: new THREE.Vector3(...WATER.sky) },
   };
   const waterMat = new THREE.ShaderMaterial({
@@ -228,23 +228,24 @@
       #define MAXOBJ ${MAXOBJ}
       uniform float uTime, uMurk, uLevel, uSpread, uPuddle, uGutterX, uUseDepth; uniform sampler2D uDepth; uniform mat4 uDepthMat; uniform vec4 uVp;
       uniform vec3 uCamPos, uSun, uClear, uMud, uSky; uniform vec4 uObj[MAXOBJ]; uniform int uObjN; uniform vec4 uCar;
-      uniform sampler2D uCam; uniform float uUseCam, uCamFlip, uOpaque;
+      uniform sampler2D uCam; uniform float uUseCam, uCamFlip, uOpaque, uHorizon, uReflect;
       varying vec3 vLocal; varying float vViewZ; varying vec3 vWorld;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
       float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y); }
       // 高さ場：右→左に流れる多重ノイズ ＋ 雨の波紋 ＋ 物体のまわりの輪
       float height(vec2 p){
-        vec2 flow = vec2(uTime*0.55, uTime*0.05);
+        vec2 flow = vec2(uTime*0.35, uTime*0.04);
         float h = 0.0;
-        h += noise(p*2.2 + flow) * 0.55;
-        h += noise(p*5.1 + flow*1.7 + 3.1) * 0.28;
-        h += noise(p*11.0 + flow*2.6 + 7.7) * 0.12;
+        h += noise(p*2.2 + flow) * 0.40;
+        h += noise(p*5.1 + flow*1.7 + 3.1) * 0.20;
+        h += noise(p*11.0 + flow*2.6 + 7.7) * 0.10;
         h += noise(p*23.0 - flow*1.3 + 1.3) * 0.05;
+        h += noise(vec2(p.x*40.0, p.y*6.0) + flow*3.0) * 0.06;   // 風の細かい横縞
         // 雨の波紋（格子ごとにランダムな時刻で広がる輪）
         vec2 g = floor(p*7.0); vec2 c = (g + 0.5 + (vec2(hash(g), hash(g+9.0)) - 0.5)*0.8) / 7.0;
         float t0 = hash(g+3.0)*2.0; float ph = fract((uTime + t0)*0.9);
         float r = ph*0.25; float d = length(p - c);
-        h += (1.0-ph) * 0.2 * sin((d - r)*110.0) * smoothstep(0.025, 0.0, abs(d - r));
+        h += (1.0-ph) * 0.12 * sin((d - r)*110.0) * smoothstep(0.025, 0.0, abs(d - r));
         // 浮遊物のまわりの輪
         for (int i = 0; i < MAXOBJ; i++) { if (i >= uObjN) break;
           vec2 op = uObj[i].xy; float dd = length(p - op);
@@ -302,15 +303,27 @@
         float foam = smoothstep(0.78, 0.95, h0);          // 波頭の泡
         col = mix(col, vec3(0.86, 0.88, 0.82), foam*0.7*(1.0-0.5*uMurk));
         col += vec3(0.9, 0.9, 0.85) * spec * (0.5 + 0.3*uMurk);
-        // 曇り空の照り返し：視線が水面と浅い角度になるほど明るい灰色になる（天井は映さない）
-        float glare = fres * 0.75 + pow(fres, 0.5) * 0.15;
-        col = mix(col, uSky, clamp(glare, 0.0, 0.85));
+        // 映り込み：カメラ映像を水平線で上下に折り返して映す（写真で長ぐつが水に映るのと同じ）
+        float glare = fres * 0.6 + pow(fres, 0.5) * 0.12;
+        if (uUseCam > 0.5 && uReflect > 0.5) {
+          vec2 uvr = vec2((gl_FragCoord.x - uVp.x) / uVp.z, (gl_FragCoord.y - uVp.y) / uVp.w);
+          if (uCamFlip > 0.5) uvr.y = 1.0 - uvr.y;
+          vec2 wob = n.xz * 0.12 + vec2(sin(vWorld.z*18.0 + uTime*2.0), 0.0) * 0.006;
+          float ry = 2.0 * uHorizon - uvr.y;      // 水平線から同じ距離だけ上
+          vec3 refl = uSky;
+          if (ry > 0.0 && ry < 1.0) refl = texture2D(uCam, clamp(vec2(uvr.x, ry) + wob, 0.0, 1.0)).rgb;
+          refl = mix(refl, uSky, 0.25);
+          float k = clamp(0.35 + fres * 0.6, 0.0, 0.9) * (1.0 - 0.25*uMurk);
+          col = mix(col, refl * (0.8 + 0.2*diff), k);
+        } else {
+          col = mix(col, uSky, clamp(glare, 0.0, 0.85));
+        }
         // 雨粒の飛沫と広がる輪（写真の白い点々）
-        { vec2 g2 = floor(p*14.0); vec2 c2 = (g2 + 0.5 + (vec2(hash(g2+5.0), hash(g2+17.0)) - 0.5)*0.7) / 14.0;
+        { vec2 g2 = floor(p*9.0); vec2 c2 = (g2 + 0.5 + (vec2(hash(g2+5.0), hash(g2+17.0)) - 0.5)*0.7) / 9.0;
           float t2 = hash(g2+23.0)*3.0; float ph2 = fract((uTime + t2)*1.8);
           float d2 = length(p - c2); float ring = ph2*0.05;
-          float rg = smoothstep(0.006, 0.0, abs(d2 - ring)) * (1.0 - ph2) * 0.5;
-          float dot2 = smoothstep(0.012, 0.0, d2) * step(ph2, 0.2) * (1.0 - ph2*5.0) * 0.9;
+          float rg = smoothstep(0.006, 0.0, abs(d2 - ring)) * (1.0 - ph2) * 0.35;
+          float dot2 = smoothstep(0.012, 0.0, d2) * step(ph2, 0.2) * (1.0 - ph2*5.0) * 0.7;
           col = mix(col, vec3(0.96, 0.97, 0.96), clamp(rg + dot2, 0.0, 1.0)); }
         float a = mix(0.45, 0.97, uMurk);            // 真水は少し透ける／泥水はほぼ不透明
         a = mix(a, 0.98, fres*0.7);                        // 斜めから見るほど不透明（照り返し）
@@ -573,7 +586,7 @@
   }
   startBtn.addEventListener('click', async () => {
     applyWidth(+document.querySelector('input[name=w]:checked').value);
-    S.refract = $('optRefract').checked;
+    S.refract = $('optRefract').checked; S.reflect = $('optReflect').checked;
     S.occ = $('optOcc').checked;
     setMurkMode($('optMurk').value); setOpaque($('optOpaque').checked);
     S.sound = $('optSound').checked; $('sndBtn').setAttribute('aria-pressed', String(S.sound)); if (S.sound) snd.start();
@@ -698,7 +711,7 @@
       waterUniforms.uUseDepth.value = used;
       // カメラ映像（屈折用）
       let camOK = 0;
-      if (S.refract) {
+      if (S.refract || S.reflect) {
         try {
           const pose = frame.getViewerPose(refSpace);
           if (pose && pose.views[0].camera && glBinding) {
@@ -716,7 +729,12 @@
     waterUniforms.uTime.value = S.t; waterUniforms.uMurk.value = S.murk; waterUniforms.uLevel.value = lvl;
     waterUniforms.uOpaque.value = S.opaque ? 1 : 0;
     waterUniforms.uPuddle.value = S.level === 5 ? 1 : 0; waterUniforms.uSpread.value = Math.min(3.4, 0.1 + S.overflowT * 0.28);
-    { const xr = renderer.xr.isPresenting ? renderer.xr.getCamera(camera) : camera; xr.getWorldPosition(waterUniforms.uCamPos.value); }
+    { const xr = renderer.xr.isPresenting ? renderer.xr.getCamera(camera) : camera; xr.getWorldPosition(waterUniforms.uCamPos.value);
+      // 水平線の画面上の高さ（0=下,1=上）：水面と平行な遠方の点を投影する
+      const cx = renderer.xr.isPresenting && xr.cameras && xr.cameras[0] ? xr.cameras[0] : xr;
+      const fw = new THREE.Vector3(0, 0, -1).applyQuaternion(cx.getWorldQuaternion(new THREE.Quaternion())); fw.y = 0;
+      if (fw.lengthSq() > 1e-4) { fw.normalize(); const far = waterUniforms.uCamPos.value.clone().addScaledVector(fw, 200); far.y = waterUniforms.uCamPos.value.y; far.project(cx); waterUniforms.uHorizon.value = Math.max(-1, Math.min(2, (far.y + 1) / 2)); } }
+    waterUniforms.uReflect.value = S.reflect ? 1 : 0;
     { let n = 0; S.debris.forEach(m => { if (n < MAXOBJ) { waterUniforms.uObj.value[n].set(m.position.x, m.position.z, m.userData.ph, 0); n++; } }); waterUniforms.uObjN.value = n; }
     if (S.car && car.visible) waterUniforms.uCar.value.set(car.position.x, car.position.z, S.car.stalled ? 0 : 1, 1); else waterUniforms.uCar.value.w = 0;
     // マンホール（SIMPLE=false のみ）

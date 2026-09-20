@@ -293,6 +293,7 @@
       <button id="camBtn" aria-pressed="false">カメラ</button>
       <button id="autoBtn" aria-pressed="false">▶ 自動</button>
       <button id="calBtn" aria-pressed="false">コーンに合わせる</button>
+      <button id="reflBtn" aria-pressed="true">映り込み</button>
       <button id="exitBtn">← もどる</button>
       <button id="revealBtn" aria-pressed="false" hidden>かくれた危険を見る</button>
       <button id="stereoBtn" aria-pressed="false" hidden>ゴーグル表示</button>
@@ -339,9 +340,9 @@
   };
   // 水の色とにごり。murkFrom〜murkTo（cm）の間で真水→泥水に変わる（「水位に連動」のとき）
   const WATER = {
-    clear: [142, 150, 148],  // 真水：曇り空を映した明るい灰色（透ける）
-    mud:   [118, 116, 98],   // 泥水：灰色がかったカーキ（佐賀の写真の色）
-    sky:   [205, 208, 206],  // 水面に映る曇り空の照り返し
+    clear: [170, 162, 148],  // 真水：明るいベージュ（長ぐつの写真の色）
+    mud:   [140, 118, 90],   // 泥水：茶色（あたたかい土の色）
+    sky:   [212, 205, 192],  // 水面に映る空の照り返し（少し暖色）
     murkFrom: 5, murkTo: 27,    // 5cmから濁りはじめ、27cmで完全な泥水（20cmで約7割）
   };
   // 画像素材（PNG・背景透明）。同じフォルダの img/ に置くと簡易図形の代わりに描かれる。無ければ簡易図形のまま。
@@ -363,7 +364,7 @@
     level: 0, auto: false, autoT: 0, reveal: false, stereo: false, cam: false,
     eyeH: 1.1, gyro: false, q: null, dragYaw: 0, dragPitch: 0, t: 0,
     lock: false, remote: false, epoch: 0,
-    corridor: true, station: 0, calib: false, cal: { yaw: 0, fov: 66, z: 0, x: 0 }, sound: false,
+    corridor: true, station: 0, calib: false, reflect: true, cal: { yaw: 0, fov: 66, z: 0, x: 0 }, sound: false,
     car: null, debris: [], debrisT: 0, overflowT: 0, mhT: 0, murk: 0, murkMode: 'level', debrisOn: false, opaque: false, height: 150,
   };
   try { const c = JSON.parse(localStorage.getItem('cal') || 'null'); if (c && typeof c.fov === 'number') S.cal = c; } catch (e) {}
@@ -522,6 +523,7 @@
   $('hudBtn').addEventListener('click', () => { const off = exp.classList.toggle('nohud'); $('hudBtn').textContent = off ? 'ボタンを出す' : 'ボタンをかくす'; });
 
   $('stationBtn').addEventListener('click', () => setStation(S.station ? 0 : 1));
+  $('reflBtn').addEventListener('click', () => { S.reflect = !S.reflect; $('reflBtn').setAttribute('aria-pressed', String(S.reflect)); });
   $('moreBtn').addEventListener('click', () => { const m = $('more'); m.hidden = !m.hidden; $('moreBtn').setAttribute('aria-pressed', String(!m.hidden)); });
   const MURK_NAME = { level: '連動', clear: '真水', mud: '泥水', auto: '自動' };
   function setMurkMode(m) { S.murkMode = m; syncDesk(); }
@@ -779,7 +781,7 @@
     }
 
     // 雨（強い雨：本数を多く、筋を長く）
-    const RAIN_N = 140;
+    const RAIN_N = 110;
     ctx.lineWidth = 1.1; ctx.strokeStyle = 'rgba(225,232,240,0.42)';
     ctx.beginPath();
     for (let i = 0; i < RAIN_N; i++) {
@@ -982,11 +984,35 @@
     }
   }
 
+  // カメラ映像を水面の位置で上下に折り返して映り込みにする（縞ごとに少しゆらす）
+  function drawCamReflection(c, horizon) {
+    if (!S.cam || !cam.videoWidth || !S.reflect) return false;
+    const { vw, vh, ox } = c;
+    const sc = Math.max(vw / cam.videoWidth, vh / cam.videoHeight);
+    const dw = cam.videoWidth * sc, dh = cam.videoHeight * sc, dx = ox + (vw - dw) / 2, dy = (vh - dh) / 2;
+    const h0 = Math.max(0, Math.min(vh, horizon));
+    ctx.save();
+    ctx.beginPath(); ctx.rect(ox, h0, vw, vh - h0); ctx.clip();
+    const strip = 10;
+    for (let y = h0; y < vh; y += strip) {
+      const dist = (y - h0) / Math.max(1, vh - h0);
+      const wob = Math.sin(y * 0.09 + S.t * 2.2) * (2 + 6 * dist) + Math.sin(y * 0.031 - S.t * 1.3) * 3 * dist;
+      // 水面の点 y に映るのは、水平線から同じ距離だけ上の景色
+      const srcY = 2 * h0 - y;                        // 画面座標（反転後）
+      const sy = (srcY - dy) / dh * cam.videoHeight;  // 動画のピクセル行
+      if (sy < 0 || sy >= cam.videoHeight) continue;
+      const sh = strip / dh * cam.videoHeight;
+      ctx.drawImage(cam, 0, Math.max(0, sy - sh), cam.videoWidth, sh, dx + wob, y, dw, strip + 1);
+    }
+    ctx.restore();
+    return true;
+  }
   function drawWaterPlane(c, lvl, horizon, near) {
     const { vw, vh, ox } = c;
+    const reflected = S.corridor && drawCamReflection(c, horizon);
     const wg = ctx.createLinearGradient(0, horizon, 0, vh);
     const murk = Math.min(1, S.murk);
-    const a0 = S.opaque ? 0.97 : S.corridor ? 0.42 : 0.35, a1 = S.opaque ? 1.0 : S.corridor ? 0.72 : 0.6;
+    const a0 = S.opaque ? 0.97 : reflected ? 0.30 : S.corridor ? 0.42 : 0.35, a1 = S.opaque ? 1.0 : reflected ? 0.62 : S.corridor ? 0.72 : 0.6;
     const mixc = (i, k) => Math.round(WATER.clear[i] + (WATER.mud[i] - WATER.clear[i]) * murk + k);
     wg.addColorStop(0, `rgba(${mixc(0, 18)},${mixc(1, 18)},${mixc(2, 14)},${Math.min(0.97, a0 + 0.52 * murk)})`);
     wg.addColorStop(1, `rgba(${mixc(0, -14)},${mixc(1, -14)},${mixc(2, -12)},${Math.min(0.98, a1 + 0.26 * murk)})`);
@@ -1006,7 +1032,7 @@
         poly3(c, pts, ctx.fillStyle);
       }
     }
-    ctx.strokeStyle = `rgba(235,240,225,${0.4 - 0.2 * murk})`; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = `rgba(235,240,225,${0.26 - 0.12 * murk})`; ctx.lineWidth = 1.2;
     if (S.corridor) {
       // 右→左の流れ：横の波線。波の山が左へ進む
       for (let i = 0; i < 12; i++) {
@@ -1043,7 +1069,7 @@
   // 雨粒が水面に当たる飛沫と輪（写真の白い点々）
   const hash2 = (a, b) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };
   function drawSplashes(c, lvl) {
-    const N = 260;
+    const N = 90;
     for (let i = 0; i < N; i++) {
       const cyc = Math.floor(S.t * 2.2 + i * 0.37), ph = (S.t * 2.2 + i * 0.37) - cyc;
       const x = hash2(i, cyc) * 7 - 3.5, z = hash2(i + 999, cyc) * 6.5 - 0.5;
@@ -1059,7 +1085,8 @@
   // 本物のコーン・バーの暗い鏡像（写真で自転車やポールが水に映る感じ）
   function drawReflections(c, lvl) {
     if (lvl <= 0 || lvl >= S.eyeH) return;
-    const col = 'rgba(28,32,32,0.26)';
+    if (S.cam && cam.videoWidth && S.reflect) return;   // カメラ映像の映り込みがあるときは不要
+    const col = 'rgba(22,80,48,0.42)';
     COR.cones.forEach(cn => { if (lvl < COR.coneH) { const r0 = COR.coneR * (1 - lvl / COR.coneH) + 0.02, rt = 0.025, d = COR.coneH - lvl; poly3(c, [[cn.x - r0, lvl, cn.z], [cn.x + r0, lvl, cn.z], [cn.x + rt, lvl - d, cn.z], [cn.x - rt, lvl - d, cn.z]], col); } });
     if (lvl < COR.barH - 0.03) COR.bars.forEach(([a, b]) => { const A = COR.cones[a], B = COR.cones[b], d0 = COR.barH - 0.03 - lvl, d1 = COR.barH + 0.03 - lvl; poly3(c, [[A.x, lvl - d0, A.z], [B.x, lvl - d0, B.z], [B.x, lvl - d1, B.z], [A.x, lvl - d1, A.z]], col); });
     COR.cushions.forEach(cu => { if (cu.on && lvl < cu.h) { const w = cu.kind === 'block' ? (cu.w || cu.r * 2) : cu.r * 2 * (1 - lvl / cu.h) + 0.04, d = cu.h - lvl, dz = cu.kind === 'block' ? (cu.d || cu.r * 2) / 2 : 0; poly3(c, [[cu.x - w / 2, lvl, cu.z - dz], [cu.x + w / 2, lvl, cu.z - dz], [cu.x + w / 2 * (cu.kind === 'block' ? 1 : 0.3), lvl - d, cu.z - dz], [cu.x - w / 2 * (cu.kind === 'block' ? 1 : 0.3), lvl - d, cu.z - dz]], col); } });
