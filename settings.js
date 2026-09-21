@@ -66,6 +66,7 @@ window.APP_TEXT = {
   tiltWait: '端末を少し動かしてください',           // 傾きがまだ取れていないあいだ
   sensorOn: 'センサーON',
   sensorChecking: 'センサー確認中…',
+  sensorActive: 'センサー動作中',
   sensorNone: 'センサーなし',
   sensorDenied: 'センサー許可なし',
   errCamDenied: 'カメラの使用が許可されていません。ブラウザの設定でこのページのカメラを「許可」にしてから、もう一度えらんでください。',

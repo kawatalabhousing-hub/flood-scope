@@ -15,7 +15,7 @@
   #exp.on{display:block}
   #cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;opacity:0}
   #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
-  /* 傾きセンサーが動いていないときだけ右上に出る（元の版の「センサーON」） */
+  /* 元の版の「センサーON」：体験中は右上にいつも出て、センサーの状態を表示する。押すと許可を取り直す */
   #sensorBtn{position:absolute;z-index:25;top:calc(10px + env(safe-area-inset-top,0px));right:10px;border:0;border-radius:999px;padding:10px 18px;background:rgba(0,0,0,.55);color:#fff;font:900 15px "Zen Maru Gothic",sans-serif;cursor:pointer}
   #sensorBtn[hidden]{display:none}
   /* 係員用：通路と障害物の位置合わせ（リモコンの K で開閉） */
@@ -61,11 +61,11 @@
   // ================= 設定（ここを編集） =================
   const SIMPLE = true;   // 浸水（高さ・にごり）と障害物だけ。車・浮遊物・側溝・マンホールは出さない
   const WS = window.WATER_SETTINGS;
-  // 水の色（0〜255）。真水・泥水は settings.js、空の照り返しは Unity のシェーダーと同じ色
+  // 水の色（0〜255）。真水・泥水は settings.js、空の照り返しは元の共通版と同じ色
   const WATER = {
     clear: WS.clearColor.map(v => Math.round(v * 255)),
     mud: WS.mudColor.map(v => Math.round(v * 255)),
-    sky: [209, 214, 222],
+    sky: [212, 205, 192],   // 元の版と同じ（少し暖色）
   };
   // 画像素材（PNG・背景透明）。同じフォルダの img/ に置くと簡易図形の代わりに描かれる（SIMPLE=false のときだけ使う）
   const IMAGES = {
@@ -133,7 +133,7 @@
     if (!sensorListening) { window.addEventListener('deviceorientation', onOrient, true); sensorListening = true; }
     sensorBtn.textContent = T.sensorChecking;
     clearTimeout(sensorTimer);
-    sensorTimer = setTimeout(() => { if (!tiltOK()) sensorBtn.textContent = T.sensorNone; }, 1500);
+    sensorTimer = setTimeout(() => { sensorBtn.textContent = tiltOK() ? T.sensorActive : T.sensorNone; }, 1500);
   }
   sensorBtn.textContent = T.sensorOn;
   sensorBtn.addEventListener('click', () => enableSensor(false));
@@ -155,11 +155,10 @@
     return [ix*w + iw*-x + iy*-z - iz*-y, iy*w + iw*-y + iz*-x - ix*-z, iz*w + iw*-z + ix*-y - iy*-x];
   }
   function onOrient(e) {
-    if (e.beta == null || e.gamma == null) return;
-    S.orientT = performance.now();
+    if (e.alpha == null) return;
     const D = Math.PI / 180;
     const orient = (screen.orientation && screen.orientation.angle != null ? screen.orientation.angle : (window.orientation || 0)) * D;
-    let q = qFromEulerYXZ(e.beta * D, (e.alpha || 0) * D, -e.gamma * D);
+    let q = qFromEulerYXZ(e.beta * D, e.alpha * D, -e.gamma * D);
     q = qMul(q, [-Math.SQRT1_2, 0, 0, Math.SQRT1_2]);            // 端末座標→カメラ座標
     q = qMul(q, [0, 0, -Math.sin(orient/2), Math.cos(orient/2)]); // 画面の向き補正
     S.q = q; S.gyro = true;
@@ -177,12 +176,12 @@
   // 端末の向き（水平面での方位）。前方向だけで計算すると、床に向けたとき（真下に近いとき）に少しの横傾きで
   // 数十度ずれるので、画面の上方向を足して求める（前を向いていても床を向いていても同じ方位になる）
   function heading(q) { const f = qRotate(q, [0, 0, -1]), u = qRotate(q, [0, 1, 0]); return Math.atan2(f[0] + u[0], -(f[2] + u[2])); }
-  function rawYaw() { return S.gyro && S.q ? heading(S.q) : 0; }
+  function rawYaw() { return S.gyro && S.q ? heading(S.q) : 0; }   // 床タップ・「まっすぐ」ボタン用
   function viewAngles() {
     let yaw = 0, pitch = 0;
     if (S.gyro && S.q) {
       const f = qRotate(S.q, [0, 0, -1]);
-      yaw = heading(S.q);
+      yaw = Math.atan2(f[0], -f[2]);
       pitch = Math.asin(Math.max(-1, Math.min(1, f[1])));
     }
     yaw += S.dragYaw;
@@ -475,77 +474,54 @@
   }
 
   // カメラ映像を水面の位置で上下に折り返して映り込みにする（縞ごとに少しゆらす）
-  // 濃さは水平線の近くほど強く（フレネル）、k 倍する。映像が無いときは空の色を映す
-  function drawCamReflection(c, horizon, k) {
+  function drawCamReflection(c, horizon) {
+    if (!S.cam || !cam.videoWidth || !S.reflect) return false;
     const { vw, vh, ox } = c;
-    const h0 = Math.max(0, Math.min(vh, horizon));
-    const fres = y => { const d = 1 - (y - h0) / Math.max(1, vh - h0); return Math.min(1, 0.15 + 0.6 * d * d * d); };
-    ctx.save();
-    ctx.beginPath(); ctx.rect(ox, h0, vw, vh - h0); ctx.clip();
-    if (!S.cam || !cam.videoWidth || !S.reflect) {
-      const sk = WATER.sky, g = ctx.createLinearGradient(0, h0, 0, vh);
-      g.addColorStop(0, `rgba(${sk[0]},${sk[1]},${sk[2]},${k * 0.75})`); g.addColorStop(1, `rgba(${sk[0]},${sk[1]},${sk[2]},${k * 0.15})`);
-      ctx.fillStyle = g; ctx.fillRect(ox, h0, vw, vh - h0);
-      ctx.restore(); return false;
-    }
     const sc = Math.max(vw / cam.videoWidth, vh / cam.videoHeight);
     const dw = cam.videoWidth * sc, dh = cam.videoHeight * sc, dx = ox + (vw - dw) / 2, dy = (vh - dh) / 2;
+    const h0 = Math.max(0, Math.min(vh, horizon));
+    ctx.save();
+    ctx.beginPath(); ctx.rect(ox, h0, vw, vh - h0); ctx.clip();
     const strip = 10;
     for (let y = h0; y < vh; y += strip) {
       const dist = (y - h0) / Math.max(1, vh - h0);
-      const wob = Math.sin(y * 0.09 + S.t * 2.2 * WS.waveSpeed / 0.5) * (2 + 6 * dist) * WS.waveStrength / 0.4 + Math.sin(y * 0.031 - S.t * 1.3) * 3 * dist;
+      const wob = Math.sin(y * 0.09 + S.t * 2.2) * (2 + 6 * dist) + Math.sin(y * 0.031 - S.t * 1.3) * 3 * dist;
       // 水面の点 y に映るのは、水平線から同じ距離だけ上の景色
       const srcY = 2 * h0 - y;                        // 画面座標（反転後）
       const sy = (srcY - dy) / dh * cam.videoHeight;  // 動画のピクセル行
       if (sy < 0 || sy >= cam.videoHeight) continue;
       const sh = strip / dh * cam.videoHeight;
-      ctx.globalAlpha = k * fres(y);
       ctx.drawImage(cam, 0, Math.max(0, sy - sh), cam.videoWidth, sh, dx + wob, y, dw, strip + 1);
     }
     ctx.restore();
     return true;
   }
-  // 水面の色（Unity の FloodWater.shader と同じ考え方）
-  //   真水：足もとの映像に水の色を掛け（clearOpacity）、映り込みを重ねる（reflectClear）
-  //   泥水：泥の色で覆う。浅いほど・mudOpacity が低いほど足もとが透ける
-  //   足もとを隠す（O キー）：泥の色で完全に覆う
   function drawWaterPlane(c, lvl, horizon, near) {
     const { vw, vh, ox } = c;
-    const top = Math.max(0, horizon);
-    const murk = Math.min(1, S.murk), fc = (a, b, k) => Math.round(a + (b - a) * k);
-    ctx.save();
-    ctx.beginPath(); ctx.rect(ox, top, vw, vh - top); ctx.clip();
-    // 真水
-    ctx.globalCompositeOperation = "multiply";
-    ctx.globalAlpha = WS.clearOpacity * 0.8;
-    ctx.fillStyle = `rgb(${WATER.clear.map(v => Math.min(255, Math.round(v * 1.15))).join(",")})`;
-    ctx.fillRect(ox, top, vw, vh - top);
-    ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
-    if (S.corridor) drawCamReflection(c, horizon, FloodUI.Water.reflect * (1 - murk));
-    // 泥水
-    const show = Math.min(1, Math.max(0, (1 - murk) * 0.5 + (1 - WS.mudOpacity)));
-    const mudA = S.opaque ? 1 : murk * (1 - 0.6 * show);
-    if (mudA > 0.001) {
-      const md = WATER.mud, g = ctx.createLinearGradient(0, top, 0, vh);
-      g.addColorStop(0, `rgba(${md.map(v => Math.min(255, v + 14)).join(",")},${mudA})`);
-      g.addColorStop(1, `rgba(${md.map(v => Math.max(0, v - 10)).join(",")},${mudA})`);
-      ctx.fillStyle = g; ctx.fillRect(ox, top, vw, vh - top);
-    }
-    ctx.restore();
-    // 泥水の泡：流れに沿って伸びる筋（泥色を 35% 混ぜたベージュ）
-    const fm = S.opaque ? 1 : murk;
-    if (fm > 0.05 && WS.foamMud > 0) {
-      const md = WATER.mud;
-      ctx.fillStyle = `rgba(${fc(237, md[0], 0.35)},${fc(224, md[1], 0.35)},${fc(204, md[2], 0.35)},${WS.foamMud * 0.35 * fm})`;
+    const reflected = S.corridor && drawCamReflection(c, horizon);
+    const wg = ctx.createLinearGradient(0, horizon, 0, vh);
+    const murk = Math.min(1, S.murk);
+    const a0 = S.opaque ? 0.97 : reflected ? 0.30 : S.corridor ? 0.42 : 0.35, a1 = S.opaque ? 1.0 : reflected ? 0.62 : S.corridor ? 0.72 : 0.6;
+    const mixc = (i, k) => Math.round(WATER.clear[i] + (WATER.mud[i] - WATER.clear[i]) * murk + k);
+    wg.addColorStop(0, `rgba(${mixc(0, 18)},${mixc(1, 18)},${mixc(2, 14)},${Math.min(0.97, a0 + 0.52 * murk)})`);
+    wg.addColorStop(1, `rgba(${mixc(0, -14)},${mixc(1, -14)},${mixc(2, -12)},${Math.min(0.98, a1 + 0.26 * murk)})`);
+    ctx.fillStyle = wg; ctx.fillRect(ox, Math.max(0, horizon), vw, vh);
+    // 水面の照り返し（真水ほど明るく光る）
+    const sk = WATER.sky;
+    const sh = ctx.createLinearGradient(0, Math.max(0, horizon), 0, Math.max(1, horizon) + vh * 0.5);
+    sh.addColorStop(0, `rgba(${sk[0]},${sk[1]},${sk[2]},${0.55 * (1 - 0.25 * murk)})`); sh.addColorStop(0.45, `rgba(${sk[0]},${sk[1]},${sk[2]},${0.18 * (1 - 0.25 * murk)})`); sh.addColorStop(1, `rgba(${sk[0]},${sk[1]},${sk[2]},0)`);
+    ctx.fillStyle = sh; ctx.fillRect(ox, Math.max(0, horizon), vw, vh * 0.5);
+    // 泥水：ゆっくり流れるにごりの帯
+    if (murk > 0.05) {
+      ctx.fillStyle = `rgba(${WATER.mud[0] + 26},${WATER.mud[1] + 24},${WATER.mud[2] + 18},${0.16 * murk})`;
       for (let i = 0; i < 7; i++) {
         const z = -0.3 + i * 0.55 + 0.08 * Math.sin(i * 2.3 + S.t * 0.4);
-        const fl = S.t * WS.flowSpeed * 2.75;
-        const pts = []; for (let k = 0; k <= 12; k++) { const x = 2.8 - 5.6 * k / 12; pts.push([x, lvl + 0.001, z + 0.06 * Math.sin(x * 3 + fl + i)]); }
-        for (let k = 12; k >= 0; k--) { const x = 2.8 - 5.6 * k / 12; pts.push([x, lvl + 0.001, z + 0.16 + 0.05 * Math.sin(x * 2.5 - fl * 0.8 + i)]); }
+        const pts = []; for (let k = 0; k <= 12; k++) { const x = 2.8 - 5.6 * k / 12; pts.push([x, lvl + 0.001, z + 0.06 * Math.sin(x * 3 + S.t * 1.1 + i)]); }
+        for (let k = 12; k >= 0; k--) { const x = 2.8 - 5.6 * k / 12; pts.push([x, lvl + 0.001, z + 0.16 + 0.05 * Math.sin(x * 2.5 - S.t * 0.9 + i)]); }
         poly3(c, pts, ctx.fillStyle);
       }
     }
-    ctx.strokeStyle = `rgba(235,240,225,${(0.26 - 0.12 * murk) * WS.waveStrength / 0.4})`; ctx.lineWidth = 1.2;
+    ctx.strokeStyle = `rgba(235,240,225,${0.26 - 0.12 * murk})`; ctx.lineWidth = 1.2;
     if (S.corridor) {
       // 右→左の流れ：横の波線。波の山が左へ進む
       for (let i = 0; i < 12; i++) {
@@ -995,10 +971,14 @@
     FloodUI.tick(dt);
     // 水の状態は ui.js の Water から受け取る（表示上の水位はなめらかに動く）
     const Wt = FloodUI.Water;
-    S.level = Wt.levelCm; S.murk = Wt.murk; S.opaque = Wt.opaque;
+    S.level = Wt.levelCm; S.opaque = Wt.opaque;
+    // にごり：元の版と同じ（水位に連動して murkFromCm〜murkToCm で直線的に濁る。M キーで真水／泥水に固定）
+    if (Wt.murkMode === 'auto') { const k = Math.max(0, Math.min(1, (Wt.shownLevel - WS.murkFromCm) / (WS.murkToCm - WS.murkFromCm))); S.murk += (k - S.murk) * Math.min(1, dt * 1.5); }
+    else if (Wt.murkMode === 'clear') S.murk = Math.max(0, S.murk - dt); else S.murk = Math.min(1, S.murk + dt);
     const tilt = tiltOK();
     FloodUI.setWait(tilt ? null : T.tiltWait);
-    sensorBtn.hidden = tilt;
+    sensorBtn.hidden = FloodUI.goggle;
+    if (tilt && sensorBtn.textContent !== T.sensorActive) sensorBtn.textContent = T.sensorActive;
     S.lvl = tilt && FloodUI.placed && Wt.shownLevel > 0.2 ? Math.max(0, (Wt.shownLevel + Wt.floorOffsetCm) / 100) : 0;
     FloodUI.setUnderwater(S.lvl > 0 && S.lvl >= S.eyeH);             // 目の高さより水が高い＝水中
     updateDebris(dt); updateCar(dt);
