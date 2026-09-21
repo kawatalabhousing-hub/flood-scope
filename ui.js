@@ -411,6 +411,12 @@
       $('fsFloorDown').addEventListener('click', () => Water.nudgeFloor(-1));
       $('fsReplace').addEventListener('click', () => Hud.replace());
       $('fsClose').addEventListener('click', () => Hud.toggleSettings());
+      // ページが足す設定パネルの項目（「置き直す」と「閉じる」のあいだ）。押すとパネルは閉じる
+      (hooks.extraButtons || []).forEach(x => {
+        const b = document.createElement('button'); b.className = 'btn'; b.textContent = x.label;
+        b.addEventListener('click', () => { $('fsPanel').hidden = true; Hud.refresh(); x.onClick(); });
+        $('fsPanel').insertBefore(b, $('fsClose'));
+      });
       Gauge.bind();
       Water.onChange(() => { Hud.sync(); Gauge.sync(); });
       Gauge.sync(); Hud.sync();

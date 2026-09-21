@@ -62,6 +62,7 @@ window.APP_TEXT = {
   arFailed: 'ARを開始できませんでした',
   cantClose: 'このタブを閉じてください',
   // 共通版（index.html）：カメラと傾きセンサー
+  calibButton: '位置合わせ（係員用）',          // 共通版の設定パネル：目の高さ・画角・向き・前後
   tiltWait: '端末を少し動かしてください',           // 傾きがまだ取れていないあいだ
   sensorOn: 'センサーON',
   sensorChecking: 'センサー確認中…',
