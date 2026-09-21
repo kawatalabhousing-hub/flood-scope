@@ -45,14 +45,15 @@ window.APP_TEXT = {
   depthPrefix: '水の深さ ',          // 見出し「水の深さ ◯cm」
   depthSuffix: 'cm',
   settingsButton: '設定',
-  goggleOn: 'ゴーグルで見る（戻すには画面を長押し）',
+  goggleOn: 'ゴーグルで見る',
+  goggleNote: '戻すには画面を長押し',   // ゴーグルボタンの下に小さく出す説明
   goggleOff: 'ボタンを出す',
   resetLevel: '水位を 0cm に戻す',
   soundOn: '音：ON',
   soundOff: '音：OFF',
-  floorUp: '床 +1cm（水を上げる）',
-  floorDown: '床 −1cm（水を下げる）',
-  replace: '置き直す（床をタップし直す）',
+  floorUp: '床 +1cm',
+  floorDown: '床 −1cm',
+  replace: '置き直す',
   close: '閉じる',
 
   // ---- ブラウザ版だけの文言（Unity 版には無い場面） ----

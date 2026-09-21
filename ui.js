@@ -128,7 +128,7 @@
       '<div id="fsBand" hidden>' + esc(T.band) + '</div>' +
       '<div id="fsButtons" hidden><button class="btn" id="fsSettings">' + esc(T.settingsButton) + '</button><button class="btn" id="fsFinish">' + esc(T.finishButton) + '</button></div>' +
       '<div id="fsPanel" hidden>' +
-        '<button class="btn" id="fsGoggleBtn">' + esc(T.goggleOn) + '</button>' +
+        '<button class="btn" id="fsGoggleBtn"><span id="fsGoggleLabel">' + esc(T.goggleOn) + '</span><small>' + esc(T.goggleNote) + '</small></button>' +
         '<button class="btn" id="fsReset">' + esc(T.resetLevel) + '</button>' +
         '<button class="btn" id="fsSound">' + esc(T.soundOn) + '</button>' +
         '<button class="btn" id="fsFloorUp">' + esc(T.floorUp) + '</button>' +
@@ -256,7 +256,7 @@
       $('fsHint').hidden = placed;
       $('fsButtons').hidden = !(placed && !this.goggle);
       $('fsBand').hidden = !placed;
-      $('fsGauge').hidden = !placed;
+      $('fsGauge').hidden = !placed || !$('fsPanel').hidden;   // 設定パネルを開いている間はスケールを隠す
       $('fsDepth').hidden = !placed;
       if (this.goggle) $('fsPanel').hidden = true;
       this.sync();
@@ -264,7 +264,7 @@
     sync() {
       $('fsDepth').textContent = T.depthPrefix + Water.levelCm + T.depthSuffix;
       $('fsSound').textContent = Sound.on ? T.soundOn : T.soundOff;
-      $('fsGoggleBtn').textContent = this.goggle ? T.goggleOff : T.goggleOn;
+      $('fsGoggleLabel').textContent = this.goggle ? T.goggleOff : T.goggleOn;
     },
     setPlaced(p) { this.placed = p; this.refresh(); },
     setUnderwater(u) {
@@ -282,7 +282,7 @@
       if (hooks.onGoggle) hooks.onGoggle(this.goggle);
       this.refresh();
     },
-    toggleSettings() { $('fsPanel').hidden = !$('fsPanel').hidden; },
+    toggleSettings() { $('fsPanel').hidden = !$('fsPanel').hidden; this.refresh(); },
     toggleSound() { Sound.toggle(); this.sync(); },
     replace() { Water.setLevel(0); $('fsPanel').hidden = true; if (hooks.onReplace) hooks.onReplace(); this.setPlaced(false); },
     // 終了：水位0・床を解除・説明画面へ（次の人に交代）

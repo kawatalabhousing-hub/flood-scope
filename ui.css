@@ -70,10 +70,12 @@
 #fsButtons{position:absolute;left:0;right:0;bottom:calc(var(--u) * 60 + env(safe-area-inset-bottom,0px));height:calc(var(--u) * 130);padding:calc(var(--u) * 11) calc(var(--u) * 24);display:flex;gap:calc(var(--u) * 16);pointer-events:auto}
 .fs .btn{flex:1;min-height:calc(var(--u) * 108);border-radius:var(--r);background:rgba(255,255,255,.92);color:var(--ink);font-weight:900;font-size:calc(var(--u) * 38);padding:0 calc(var(--u) * 12)}
 .fs .btn:active{background:#fff}
-#fsPanel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(var(--u) * 920);max-width:calc(100% - 16px);height:calc(var(--u) * 920);max-height:calc(100% - 16px);padding:calc(var(--u) * 30);border-radius:var(--r);background:rgba(0,0,0,.8);display:flex;flex-direction:column;gap:calc(var(--u) * 14);pointer-events:auto}
+#fsPanel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(var(--u) * 920);max-width:calc(100% - 16px);height:calc(var(--u) * 920);max-height:calc(100% - 16px);padding:calc(var(--u) * 30);border-radius:var(--r);background:rgba(0,0,0,.8);display:flex;flex-direction:column;gap:calc(var(--u) * 14);pointer-events:auto;z-index:11}   /* 縦スケールより手前。開いている間スケールは隠す */
 #fsPanel .btn{flex:1 1 0;min-height:0}
+#fsGoggleBtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u) * 4)}
+#fsGoggleBtn small{font-weight:500;font-size:calc(var(--u) * 26);color:#4a5563}
 
-/* 右端の縦スケール（GaugeUI）。いちばん手前 */
+/* 右端の縦スケール（GaugeUI）。設定パネル以外より手前 */
 #fsGauge{position:absolute;z-index:10;width:calc(var(--g) * 240);height:calc(var(--g) * 800);transform:translate(-50%,-50%)}
 #fsGauge .track{position:absolute;left:calc(50% + var(--g) * 20);top:calc(50% + var(--g) * 20);width:calc(var(--g) * 60);height:calc(var(--g) * 640);transform:translate(-50%,-50%);background:rgba(255,255,255,.28);border-radius:calc(var(--g) * 10)}
 #fsGauge .tick{position:absolute;left:50%;width:calc(var(--g) * 80);height:calc(var(--g) * 4);transform:translate(-50%,50%);background:#fff}
