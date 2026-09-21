@@ -105,7 +105,7 @@
         '<div class="chip">' + esc(T.titleTop) + '</div>' +
         '<h1 class="main">' + esc(T.titleMain) + '</h1>' +
         '<div class="subt">' + esc(T.titleSub) + '</div>' +
-        '<div class="body"><p>' + esc(T.body) + '</p></div>' +
+        '<div class="body"><div class="note" id="fsNote" hidden></div><p>' + esc(T.body) + '</p></div>' +
         '<div class="row"><button id="fsStart">' + esc(T.startButton) + '</button><button id="fsQuit">' + esc(T.quitButton) + '</button></div>' +
       '</div>' +
       '<div class="page" id="fsView" hidden>' +
@@ -214,7 +214,7 @@
       } catch (e) {
         Sound.setRunning(false);
         const err = $('fsErr'); err.hidden = false;
-        err.innerHTML = e && e.html ? e.html : esc(T.arFailed + (e && e.message ? '：' + e.message : ''));
+        err.innerHTML = e && e.html ? e.html : e && e.text ? esc(e.text) : esc(T.arFailed + (e && e.message ? '：' + e.message : ''));
         return;
       }
       $('fsIntro').hidden = true; $('fsHud').hidden = false;
@@ -246,14 +246,16 @@
   // ================= Hud（HudUI） =================
   let pressTimer = 0;
   const Hud = {
-    placed: false, goggle: false, pendingGoggle: false, underwater: false,
+    placed: false, goggle: false, pendingGoggle: false, underwater: false, waitText: null,
     reset() { this.placed = false; this.goggle = false; this.pendingGoggle = false; this.underwater = false; $('fsPanel').hidden = true; this.refresh(); },
     // 床タップまでは案内だけ。タップ後にボタン・帯・目盛り・見出しを出す
     refresh() {
       const placed = this.placed;
       // 「ゴーグルで見る」を選んでいたら、床が決まった時点で一度だけゴーグルモードに入る
       if (this.pendingGoggle && placed && !this.goggle) { this.pendingGoggle = false; this.toggleGoggle(); return; }
-      $('fsHint').hidden = placed;
+      // 案内箱：床タップの案内。ページが待ちの案内（setWait）を出しているときはそちらを優先
+      $('fsHint').hidden = placed && !this.waitText;
+      $('fsHint').textContent = this.waitText || T.tapHint;
       $('fsButtons').hidden = !(placed && !this.goggle);
       $('fsBand').hidden = !placed;
       $('fsGauge').hidden = !placed || !$('fsPanel').hidden;   // 設定パネルを開いている間はスケールを隠す
@@ -267,6 +269,7 @@
       $('fsGoggleLabel').textContent = this.goggle ? T.goggleOff : T.goggleOn;
     },
     setPlaced(p) { this.placed = p; this.refresh(); },
+    setWait(text) { text = text || null; if (text !== this.waitText) { this.waitText = text; this.refresh(); } },
     setUnderwater(u) {
       if (u) { const c = Water.color.map(v => Math.round(v * 0.85 * 255)); $('fsUnder').style.background = 'rgba(' + c.join(',') + ',0.96)'; }
       if (u !== this.underwater) { this.underwater = u; $('fsUnder').hidden = !u; }
@@ -381,6 +384,10 @@
     get goggle() { return Hud.goggle; },
     get hudRoot() { return $('fsHud'); },
     setPlaced(p) { Hud.setPlaced(p); },
+    setWait(text) { Hud.setWait(text); },
+    // 説明画面の本文の上に、ページからのお知らせを出す（html）
+    showNotice(html) { const n = $('fsNote'); n.innerHTML = html; n.hidden = !html; },
+    esc,
     setUnderwater(u) { Hud.setUnderwater(u); },
     press(down) { Hud.press(down); },
     finish() { Hud.finish(); },

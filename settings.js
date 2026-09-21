@@ -61,6 +61,20 @@ window.APP_TEXT = {
   noARLink: '共通版をひらく',
   arFailed: 'ARを開始できませんでした',
   cantClose: 'このタブを閉じてください',
+  // 共通版（index.html）：カメラと傾きセンサー
+  tiltWait: '端末を少し動かしてください',           // 傾きがまだ取れていないあいだ
+  sensorOn: 'センサーON',
+  sensorChecking: 'センサー確認中…',
+  sensorNone: 'センサーなし',
+  sensorDenied: 'センサー許可なし',
+  errCamDenied: 'カメラの使用が許可されていません。ブラウザの設定でこのページのカメラを「許可」にしてから、もう一度えらんでください。',
+  errCamNone: 'カメラが見つかりません。',
+  errCamBusy: 'カメラをほかのアプリが使っています。ほかのアプリを閉じてから、もう一度えらんでください。',
+  errCamInsecure: 'カメラを使うには https のページとして開いてください。',
+  errCamOther: 'カメラを開始できませんでした',
+  errSensorDenied: '傾きセンサーの使用が許可されていません。iPhone は 設定 → Safari →「モーションと画面の向きのアクセス」をオンにしてから、ページを読み込み直してください。',
+  androidNote: 'この端末では Android版（WebXR）が使えます。床にぴったり合うので、こちらがおすすめです。',
+  androidLink: 'Android版をひらく',
 };
 
 // 会場で触る数値（WaterSettings）。色は 0〜1 の RGB

@@ -42,6 +42,8 @@
 #fsInfo .subt{position:absolute;left:0;right:0;top:calc(var(--u) * 320);height:calc(var(--u) * 64);display:grid;place-items:center;font-weight:900;font-size:calc(var(--u) * 48);color:var(--sub);white-space:nowrap}
 #fsInfo .body{position:absolute;left:calc(var(--u) * 60);right:calc(var(--u) * 60);top:calc(var(--u) * 400);bottom:calc(var(--u) * 270);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;user-select:text;-webkit-user-select:text}
 #fsInfo .body p{margin:0;white-space:pre-wrap;font-size:calc(var(--u) * 56);line-height:1.55;color:var(--body)}
+#fsInfo .note{margin:0 0 calc(var(--u) * 30);padding:calc(var(--u) * 24) calc(var(--u) * 30);border-radius:var(--r);background:#e3f0f5;color:var(--ink);font-size:calc(var(--u) * 44);line-height:1.5}
+#fsInfo .note a{display:inline-block;margin-top:calc(var(--u) * 12);padding:calc(var(--u) * 14) calc(var(--u) * 30);border-radius:var(--r);background:var(--blue);color:#fff;font-weight:900;text-decoration:none}
 #fsInfo .row{position:absolute;left:50%;bottom:calc(var(--u) * 110);transform:translateX(-50%);width:calc(var(--u) * 880);max-width:calc(100% - 32px);height:calc(var(--u) * 120);display:flex;gap:calc(var(--u) * 24)}
 #fsInfo .row button{flex:1;border-radius:var(--r);color:#fff;font-weight:900;font-size:calc(var(--u) * 53)}
 #fsStart{background:var(--blue)}
