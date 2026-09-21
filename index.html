@@ -933,7 +933,7 @@
   $('calH2').addEventListener('change', e => setObs(1, e.target.value));
   $('calH3').addEventListener('change', e => setObs(2, e.target.value));
   $('calW').addEventListener('change', e => { S.cal.w = +e.target.value; setCorridorWidth(S.cal.w); calSave(); });
-  $('calStraight').addEventListener('click', () => { S.cal.yaw = -rawYaw() - S.dragYaw; calSave(); calSync(); });
+  $('calStraight').addEventListener('click', () => { S.cal.yaw = -(rawYaw() - (S.station ? Math.PI : 0)) - S.dragYaw; calSave(); calSync(); });
 
   // ---------- 床の設定（FloorPlacer）：タップした向きを通路の「まっすぐ」にして、そこを水位0の基準にする ----------
   cv.addEventListener('pointerdown', e => dragStart(e));
@@ -953,7 +953,7 @@
   }
   function leave() {
     exp.classList.remove('on');
-    setCalib(false);
+    setCalib(false); S.station = 0;
     stopCam();
     cancelAnimationFrame(raf); raf = 0;
   }
@@ -982,7 +982,13 @@
     fullscreen: true,
     onEnter: enter,
     onFinish: leave,
-    onKey: k => { if (k === 'k' || k === 'K') { setCalib(!S.calib); return true; } return false; },
+    onReplace: () => { S.station = 0; },
+    // 係員用のキー：K = 位置合わせパネル、T = ゴールで止まる（ゴールから入口の方を見た向きに通路を切り替える）
+    onKey: k => {
+      if (k === 'k' || k === 'K') { setCalib(!S.calib); return true; }
+      if (k === 't' || k === 'T') { S.station = S.station ? 0 : 1; return true; }
+      return false;
+    },
   });
 })();
 </script>
