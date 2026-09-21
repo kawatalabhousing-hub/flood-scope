@@ -1,0 +1,84 @@
+/* しん水スコープ ブラウザ版の共通の見た目（Unity 版 FloodScopeSetup.cs と同じ色・大きさ）
+   大きさの単位 --u は Unity の基準解像度 1080×1920（match 0.5）の 1 単位ぶんの px。ui.js が画面の大きさから計算する。
+   文字は Unity の MakeText に渡している値 × 1.2（FontScale）。縦スケールの単位 --g は画面の高さ 55% を 800 とした 1 単位 */
+:root{
+  --u:0.4px; --g:0.3px;
+  --ink:#1c2633;            /* 文字（0.11, 0.15, 0.20） */
+  --paper:#faf7f2;          /* 説明画面の地（0.98, 0.97, 0.95） */
+  --body:#262626;           /* 本文（0.15） */
+  --navy:#215f9a;           /* アイコンと同じ濃紺 */
+  --yellow:#ffff00;         /* 見出し1行目の文字 */
+  --sub:#33738c;            /* 見出し3行目（0.20, 0.45, 0.55） */
+  --blue:#1f6e8c;           /* はじめる・タブレット・案内箱（0.12, 0.43, 0.55） */
+  --gray:#6b7075;           /* アプリをとじる（0.42, 0.44, 0.46） */
+  --green:#267366;          /* ゴーグル（0.15, 0.45, 0.40） */
+  --red:#c73630;            /* 赤い帯（0.78, 0.21, 0.18） */
+  --logo-ink:#1a264d;       /* ロゴの代わりの文字（0.10, 0.15, 0.30） */
+  --fill:rgba(94,138,143,.9);   /* 縦スケールの塗り（0.37, 0.54, 0.56, 0.9） */
+  --knob:#e89130;               /* つまみ（0.91, 0.57, 0.18） */
+  --r:calc(var(--u) * 20);      /* 角丸（RoundedRect.png の角 R=20） */
+}
+.fs, .fs *{box-sizing:border-box}
+.fs{font-family:"Zen Maru Gothic",system-ui,sans-serif;font-weight:500;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+.fs button{font-family:inherit;border:0;cursor:pointer;touch-action:manipulation}
+.fs button:focus-visible{outline:calc(var(--u) * 6) solid var(--knob);outline-offset:calc(var(--u) * 4)}
+.fs [hidden]{display:none!important}
+
+/* ================= 起動画面（ロゴ → 説明 → 見かたをえらぶ） ================= */
+#fsIntro{position:fixed;inset:0;z-index:50;background:#fff}
+#fsIntro .page{position:absolute;inset:0;opacity:0}
+#fsIntro .page.fade{transition:opacity var(--fade,.5s) cubic-bezier(.45,0,.55,1)}   /* SmoothStep と同じ出だしと終わり */
+#fsIntro .page.on{opacity:1}
+
+/* 1. ロゴ */
+#fsLogo{background:#fff;display:grid;place-items:center}
+#fsLogo img{width:calc(var(--u) * 720);height:calc(var(--u) * 400);object-fit:contain}
+#fsLogo b{font-weight:900;font-size:calc(var(--u) * 96);color:var(--logo-ink)}
+
+/* 2. 説明 */
+#fsInfo{background:var(--paper)}
+#fsInfo .chip{position:absolute;top:calc(var(--u) * 110);left:50%;transform:translateX(-50%);min-width:calc(var(--u) * 300);height:calc(var(--u) * 82);padding:0 calc(var(--u) * 30);border-radius:var(--r);background:var(--navy);color:var(--yellow);font-weight:900;font-size:calc(var(--u) * 53);display:grid;place-items:center;white-space:nowrap}
+#fsInfo .main{position:absolute;left:0;right:0;top:calc(var(--u) * 200);height:calc(var(--u) * 110);margin:0;display:grid;place-items:center;font-weight:900;font-size:calc(var(--u) * 86);color:var(--ink);white-space:nowrap}
+#fsInfo .subt{position:absolute;left:0;right:0;top:calc(var(--u) * 320);height:calc(var(--u) * 64);display:grid;place-items:center;font-weight:900;font-size:calc(var(--u) * 48);color:var(--sub);white-space:nowrap}
+#fsInfo .body{position:absolute;left:calc(var(--u) * 60);right:calc(var(--u) * 60);top:calc(var(--u) * 400);bottom:calc(var(--u) * 270);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;user-select:text;-webkit-user-select:text}
+#fsInfo .body p{margin:0;white-space:pre-wrap;font-size:calc(var(--u) * 56);line-height:1.55;color:var(--body)}
+#fsInfo .row{position:absolute;left:50%;bottom:calc(var(--u) * 110);transform:translateX(-50%);width:calc(var(--u) * 880);max-width:calc(100% - 32px);height:calc(var(--u) * 120);display:flex;gap:calc(var(--u) * 24)}
+#fsInfo .row button{flex:1;border-radius:var(--r);color:#fff;font-weight:900;font-size:calc(var(--u) * 53)}
+#fsStart{background:var(--blue)}
+#fsQuit{background:var(--gray)}
+
+/* 3. 見かたをえらぶ */
+#fsView{background:var(--paper)}
+#fsView h2{position:absolute;left:0;right:0;top:calc(var(--u) * 280);height:calc(var(--u) * 90);margin:0;display:grid;place-items:center;font-weight:900;font-size:calc(var(--u) * 60);color:var(--ink)}
+#fsView .choices{position:absolute;left:50%;top:calc(50% + var(--u) * 40);transform:translate(-50%,-50%);width:calc(var(--u) * 940);max-width:calc(100% - 32px);height:calc(var(--u) * 700);display:flex;gap:calc(var(--u) * 40)}
+#fsView .choices button{flex:1;position:relative;border-radius:var(--r);color:#fff}
+#fsView .choices svg{position:absolute;left:50%;top:calc(50% - var(--u) * 80);transform:translate(-50%,-50%);width:calc(var(--u) * 300);height:calc(var(--u) * 300)}
+#fsView .choices b{position:absolute;left:0;right:0;bottom:calc(var(--u) * 90);height:calc(var(--u) * 70);display:grid;place-items:center;font-weight:900;font-size:calc(var(--u) * 43);white-space:nowrap}
+#fsTablet{background:var(--blue)}
+#fsGoggle{background:var(--green)}
+#fsView .err{position:absolute;left:calc(var(--u) * 70);right:calc(var(--u) * 70);bottom:calc(var(--u) * 120);margin:0;text-align:center;font-size:calc(var(--u) * 40);color:var(--red)}
+#fsView .err a{color:var(--blue);font-weight:900}
+
+/* ================= 体験画面（HudUI） ================= */
+#fsHud{position:fixed;inset:0;z-index:20;pointer-events:none;overflow:hidden}
+#fsHud > *{pointer-events:none}
+#fsUnder{position:absolute;inset:0}                                   /* 水中オーバーレイ（最背面） */
+#fsRain{position:absolute;inset:0;width:100%;height:100%}             /* 雨（android.html だけが使う） */
+#fsDepth{position:absolute;left:0;right:0;top:calc(var(--u) * 120 + env(safe-area-inset-top,0px));height:calc(var(--u) * 90);display:grid;place-items:center;font-weight:900;font-size:calc(var(--u) * 67);color:#fff;text-shadow:calc(var(--u) * 2) calc(var(--u) * 2) 0 rgba(0,0,0,.5);white-space:nowrap}
+#fsHint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(var(--u) * 940);max-width:calc(100% - 32px);min-height:calc(var(--u) * 132);padding:calc(var(--u) * 16);border-radius:var(--r);background:rgba(31,110,140,.9);color:#fff;font-size:calc(var(--u) * 43);display:grid;place-items:center;text-align:center}
+#fsBand{position:absolute;left:50%;bottom:calc(var(--u) * 266 + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:calc(var(--u) * 980);max-width:calc(100% - 32px);min-height:calc(var(--u) * 108);padding:calc(var(--u) * 10) calc(var(--u) * 20);border-radius:var(--r);background:rgba(199,54,48,.9);color:#fff;font-size:calc(var(--u) * 41);display:grid;place-items:center;text-align:center}
+#fsButtons{position:absolute;left:0;right:0;bottom:calc(var(--u) * 60 + env(safe-area-inset-bottom,0px));height:calc(var(--u) * 130);padding:calc(var(--u) * 11) calc(var(--u) * 24);display:flex;gap:calc(var(--u) * 16);pointer-events:auto}
+.fs .btn{flex:1;min-height:calc(var(--u) * 108);border-radius:var(--r);background:rgba(255,255,255,.92);color:var(--ink);font-weight:900;font-size:calc(var(--u) * 38);padding:0 calc(var(--u) * 12)}
+.fs .btn:active{background:#fff}
+#fsPanel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(var(--u) * 920);max-width:calc(100% - 16px);height:calc(var(--u) * 920);max-height:calc(100% - 16px);padding:calc(var(--u) * 30);border-radius:var(--r);background:rgba(0,0,0,.8);display:flex;flex-direction:column;gap:calc(var(--u) * 14);pointer-events:auto}
+#fsPanel .btn{flex:1 1 0;min-height:0}
+
+/* 右端の縦スケール（GaugeUI）。いちばん手前 */
+#fsGauge{position:absolute;z-index:10;width:calc(var(--g) * 240);height:calc(var(--g) * 800);transform:translate(-50%,-50%)}
+#fsGauge .track{position:absolute;left:calc(50% + var(--g) * 20);top:calc(50% + var(--g) * 20);width:calc(var(--g) * 60);height:calc(var(--g) * 640);transform:translate(-50%,-50%);background:rgba(255,255,255,.28);border-radius:calc(var(--g) * 10)}
+#fsGauge .tick{position:absolute;left:50%;width:calc(var(--g) * 80);height:calc(var(--g) * 4);transform:translate(-50%,50%);background:#fff}
+#fsGauge .tick span{position:absolute;right:calc(100% + var(--g) * 15);top:50%;transform:translateY(-50%);font-size:calc(var(--g) * 36);color:#fff;text-shadow:calc(var(--g) * 2) calc(var(--g) * 2) 0 rgba(0,0,0,.5);white-space:nowrap}
+#fsGauge .fill{position:absolute;left:0;right:0;bottom:0;height:0;background:var(--fill);border-radius:0 0 calc(var(--g) * 10) calc(var(--g) * 10)}
+#fsGauge .knob{position:absolute;left:50%;bottom:0;width:calc(var(--g) * 104);height:calc(var(--g) * 104);transform:translate(-50%,50%);border-radius:50%;background:var(--knob);color:#000;font-size:calc(var(--g) * 41);display:grid;place-items:center;font-variant-numeric:tabular-nums}
+#fsGauge .cap{position:absolute;left:calc(50% + var(--g) * 20);top:calc(50% - var(--g) * 385);width:calc(var(--g) * 180);transform:translate(-50%,-50%);text-align:center;font-weight:900;font-size:calc(var(--g) * 36);color:#fff;text-shadow:calc(var(--g) * 2) calc(var(--g) * 2) 0 rgba(0,0,0,.5);white-space:nowrap}
+#fsGauge .hit{position:absolute;left:calc(50% + var(--g) * 20);top:calc(50% + var(--g) * 20);width:calc(var(--g) * 160);height:calc(var(--g) * 720);transform:translate(-50%,-50%);pointer-events:auto;touch-action:none}
