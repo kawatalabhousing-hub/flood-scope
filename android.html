@@ -4,163 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>【AR体験】しん水スコープ Android版</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;900&display=swap">
+<link rel="stylesheet" href="ui.css">
+<style>
+  html,body{height:100%;margin:0;background:#000;overflow:hidden}
+</style>
 </head>
 <body>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700;900&family=Noto+Sans+JP:wght@400;700&display=swap">
-<style>
-  :root{--ink:#1c2733;--bg:#f2f4ee;--panel:#fff;--line:#d6dbd2;--muted:#5b6770;--accent:#1f6f8b;--warn:#e8912d;--danger:#c8352e}
-  html,body{height:100%;margin:0}
-  body{background:var(--bg);color:var(--ink);font-family:"Noto Sans JP",system-ui,sans-serif;line-height:1.6}
-  h1{font-family:"Zen Maru Gothic",sans-serif;font-size:28px;margin:8px 0;line-height:1.25}
-  h1 .tag{display:block;font-size:16px;color:var(--accent);letter-spacing:.04em}
-  .sub{font-family:"Zen Maru Gothic","Noto Sans JP",sans-serif;font-weight:700;font-size:16px;color:var(--muted);margin:0 0 12px}
-  h2{font-family:"Zen Maru Gothic",sans-serif;font-size:19px;margin:0}
-  .wrap{max-width:640px;margin:0 auto;padding:24px 16px 40px}
-  .lead{color:var(--muted)}
-  .big{display:block;width:100%;padding:18px;border:0;border-radius:14px;background:var(--accent);color:#fff;font:700 20px "Zen Maru Gothic",sans-serif;margin:18px 0 10px;cursor:pointer}
-  .big[disabled]{background:#9aa3a8}
-  .note{font-size:13px;color:var(--muted)}
-  ol{padding-left:1.3em}
-  .opts{display:grid;gap:8px;font-size:15px}
-  .step{display:flex;align-items:center;gap:10px;margin-top:22px;margin-bottom:8px}
-  .step .num{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font:900 15px "Zen Maru Gothic",sans-serif;display:grid;place-items:center;flex:none}
-  .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .seg label{display:block;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer}
-  .seg label:has(input:checked){border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
-  .seg label b{font-family:"Zen Maru Gothic",sans-serif;font-size:16px;display:block}
-  .seg label small{color:var(--muted);font-size:12px}
-  .seg input{position:absolute;opacity:0;width:0;height:0}
-  .chips{display:flex;gap:8px;flex-wrap:wrap}
-  .chips label{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 16px;cursor:pointer;font-size:15px}
-  .chips label:has(input:checked){background:var(--accent);color:#fff;border-color:var(--accent)}
-  .chips input{position:absolute;opacity:0;width:0;height:0}
-  details.staff{margin-top:26px;border-top:1px dashed var(--line);padding-top:12px}
-  details.staff summary{cursor:pointer;color:var(--muted);font-weight:700;font-size:14px}
-  /* AR overlay */
-  #ov{position:fixed;inset:0;display:none;pointer-events:none;font-family:"Zen Maru Gothic","Noto Sans JP",sans-serif}
-  #ov.on{display:block}
-  #msg{position:absolute;top:calc(46px + env(safe-area-inset-top,0px));left:0;right:0;text-align:center;padding:0 12px}
-  #msg b{display:inline-block;background:rgba(255,255,255,.92);color:#1c2733;border-radius:14px;padding:6px 18px;font-size:26px;font-weight:900}
-  #msg span{display:block;margin-top:6px}
-  #msg span i{display:inline-block;font-style:normal;background:rgba(255,255,255,.88);border-radius:12px;padding:5px 14px;font-size:18px;font-weight:700}
-  #foot{position:absolute;bottom:calc(70px + env(safe-area-inset-bottom,0px));left:0;right:0;text-align:center}
-  #ov.nobar #foot{bottom:calc(40px + env(safe-area-inset-bottom,0px))}
-  #foot i{display:inline-block;font-style:normal;background:rgba(200,53,46,.9);color:#fff;border-radius:12px;padding:6px 16px;font-size:17px;font-weight:700}
-  #rain{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-  #hint{position:absolute;top:50%;left:0;right:0;text-align:center;transform:translateY(-50%)}
-  #hint i{display:inline-block;font-style:normal;background:rgba(31,111,139,.9);color:#fff;border-radius:12px;padding:8px 16px;font-size:16px;font-weight:700}
-  #bar{position:absolute;left:0;right:0;bottom:0;padding:8px 10px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;pointer-events:auto;background:linear-gradient(transparent,rgba(0,0,0,.5))}
-  #bar .lv{display:flex;gap:5px}
-  #bar .lv button{flex:1;padding:14px 0;border-radius:9px;border:0;background:rgba(255,255,255,.9);color:#1c2733;font:900 17px "Zen Maru Gothic",sans-serif}
-  #bar .lv button[aria-pressed="true"]{background:var(--warn)}
-  #bar .sl{display:flex;gap:10px;align-items:center;color:#fff;font:700 14px 'Zen Maru Gothic',sans-serif}
-  #bar .sl input{flex:1;height:28px}
-  #bar .sl span{min-width:3.5em;text-align:right}
-  #bar .tl{display:flex;gap:5px;flex-wrap:wrap}
-  #bar .tl button{flex:1 1 22%;padding:10px 0;border-radius:9px;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.4);color:#fff;font:600 13px "Noto Sans JP",sans-serif}
-  #bar .tl button[aria-pressed="true"]{background:rgba(255,255,255,.9);color:#1c2733}
-  #ov.nobar #bar{display:none}
-  #bar .lv,#bar .sl{display:none}   /* 水位は右端の縦スケールで変える */
-  /* 縦の水位スケール（量水標） */
-  #gauge{position:absolute;right:8px;top:27%;bottom:21%;width:70px;touch-action:none;user-select:none;-webkit-user-select:none;pointer-events:auto}
-  #gauge .track{position:absolute;z-index:1;left:14px;top:0;bottom:0;width:16px;border-radius:9px;background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.7);overflow:hidden}
-  #gauge .fill{position:absolute;left:0;right:0;bottom:0;height:0;background:#5f8a8e;transition:height .25s,background .5s}
-  #gauge .tick{position:absolute;z-index:2;left:8px;width:28px;height:0;border-top:2px solid rgba(255,255,255,.95);transform:translateY(-1px)}
-  #gauge .tick span{position:absolute;left:32px;top:-10px;font:700 13px "Zen Maru Gothic","Noto Sans JP",sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);white-space:nowrap}
-  #gauge .knob{position:absolute;z-index:3;left:3px;width:38px;height:38px;border-radius:50%;background:#e8912d;color:#1c2733;transform:translateY(-50%);display:grid;place-items:center;font:900 14px "Zen Maru Gothic",sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.45);transition:top .25s}
-  #gauge .knob.drag{transition:none}
-  #gauge .fill.drag{transition:none}
-  #gauge .cap{position:absolute;left:0;right:0;top:-26px;text-align:center;font:700 12px "Noto Sans JP",sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8)}
-  #ov.nobar #gauge{display:none}
-  #more[hidden]{display:none}
-  #top{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));left:10px;right:10px;display:flex;justify-content:space-between;pointer-events:auto}
-  #top button{border:0;border-radius:999px;padding:7px 12px;background:rgba(0,0,0,.45);color:#fff;font:700 12px "Noto Sans JP",sans-serif}
-</style>
-
-<div class="wrap" id="home">
-  <div class="note">大分地方気象台 お天気フェア ・ Android版（WebXR）</div>
-  <h1><span class="tag">【AR体験】</span>しん水スコープ</h1>
-  <div class="sub">〜まちの「もしも」にそなえよう！〜</div>
-  <p class="lead">大雨のとき、まちの水は下水道や用水路に流れていきます。でも、雨が強すぎて流しきれないと、道路に水があふれます。川や山から遠いまちでも起きる「内水氾濫（ないすいはんらん）」です。</p>
-  <p class="lead">スコープをのぞくと、目の前の通路にどんどん水がたまり、足もとの物が見えなくなります。どこまでなら歩ける？ いつにげる？ 体験して考えてみよう。</p>
-
-  <div class="step"><span class="num">1</span><h2>見かたをえらぶ</h2></div>
-  <div class="seg">
-    <label><input type="radio" name="view" value="tablet" checked><b>タブレットで見る</b><small>右端の目盛りで水位を変える</small></label>
-    <label><input type="radio" name="view" value="goggle"><b>VRゴーグルで見る</b><small>全画面・ボタンなし。操作はスタッフのPC</small></label>
-  </div>
-
-  <div class="step"><span class="num">2</span><h2>ARをはじめる</h2></div>
-  <button class="big" id="startBtn" disabled>確認中…</button>
-  <p id="support" class="note"></p>
-  <ol>
-    <li>入口の立ち位置に立ち、通路の奥を向く。</li>
-    <li>床に白い輪が出たら、自分の足元の床をタップ。そこが通路の入口になり、向いている方向が通路の奥になります。</li>
-    <li>右端の目盛りをなぞる、またはスタッフのPCで水位を上げます。水は浅いうちは透明で、深くなるほど泥水になります。</li>
-  </ol>
-
-  <details class="staff">
-    <summary>スタッフ用の設定</summary>
-    <p class="opts" style="margin-top:8px">通路の幅：<span class="chips"><label><input type="radio" name="w" value="1.2"> 1.2m</label><label><input type="radio" name="w" value="1.5" checked> 1.5m</label></span></p>
-    <p class="code-row">操作コード：<input type="text" id="deskCode" inputmode="numeric" maxlength="4" placeholder="4けた" style="font:700 22px 'Zen Maru Gothic',sans-serif;width:6em;padding:6px 10px;border:1px solid var(--line);border-radius:10px;letter-spacing:.15em"> <span class="note">desk.html に出る数字。入れるとスタッフのPCから操作でき、端末のボタンは隠れます。</span></p>
-    <p class="opts"><label>水のにごり：<select id="optMurk"><option value="level" selected>水位に連動（浅いと真水、深いほど泥水）</option><option value="clear">真水で固定</option><option value="mud">泥水で固定</option></select></label><label><input type="checkbox" id="optOpaque"> 足元を完全に見えなくする（水を不透明に）</label><label><input type="checkbox" id="optSound" checked> 音を出す</label><label><input type="checkbox" id="optRefract" checked> 水越しに床が透ける</label><label><input type="checkbox" id="optReflect" checked> 水面に景色を映す（映り込み）</label><label><input type="checkbox" id="optOcc" checked> 奥行きで本物を沈める</label></p>
-    <p class="note">動作条件：ARCore対応のAndroid端末＋Chrome。https のページとして開く必要があります。カメラ映像はどこにも送信・保存されません。</p>
-  </details>
-</div>
-
-<div id="ov">
-  <div id="top"><span></span><button id="barBtn">ボタンをかくす</button></div>
-  <div id="msg"><b id="mT">あめが ふりはじめた</b><span><i id="mS">まだ 水は たまっていない。足もとが 見えているね</i></span></div>
-  <canvas id="rain"></canvas>
-  <div id="hint"><i id="hintT">足元の床を タップして 通路の入口を決める</i></div>
-  <div id="foot"><i id="fT" hidden></i></div>
-  <div id="gauge" aria-label="水位スケール">
-    <div class="cap">水の ふかさ</div>
-    <div class="track"><div class="fill" id="gFill"></div></div>
-    <div class="knob" id="gKnob">0</div>
-  </div>
-  <div id="bar">
-    <div class="lv" id="lv"></div>
-    <div class="sl"><input type="range" id="lvSlider" min="0" max="70" step="1" value="0"><span id="lvVal">0cm</span></div>
-    <div class="tl">
-      <button id="sndBtn" aria-pressed="false">音</button>
-      <button id="floorUp">床を上げる ▲1cm</button>
-      <button id="floorDown">床を下げる ▼1cm</button>
-      <button id="exitBtn">← 終了</button>
-    </div>
-  </div>
-</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="settings.js"></script>
+<script src="ui.js"></script>
 <script>
 /* =====================================================================
    しん水スコープ / Flood Scope Android版（WebXR / ARCore）
    ---------------------------------------------------------------------
-   ■ 編集してよいところ：SIMPLE（true=浸水と障害物だけ／false=車・浮遊物・側溝・マンホールも出す）,
-     LEVELS（水位の段階）, MSG（言葉）, WATER（水の色・にごりが変わる水位）, COR（通路の寸法）。
+   ■ 文言と水の数値は settings.js（Unity 版の AppText / WaterSettings の写し）で変える
+   ■ 画面の流れ（ロゴ → 説明 → 見かたをえらぶ → 床の設定 → 体験）とボタン類は ui.js。
+     AR 中は ui.js の #fsHud を DOM オーバーレイとして重ねる
+   ■ このファイルで編集してよいところ：SIMPLE（true=浸水と障害物だけ／false=車・浮遊物・側溝・マンホールも出す）、COR（通路の寸法）。
      それより下の three.js / WebXR の部分は触らない
    ■ リアルな見た目にしたいとき（SIMPLE=false）：models/ フォルダに .glb を置く（CC0 素材）。無ければ簡易形状で動く
    ■ 置き場所：https のサーバー必須（GitHub Pages など）
    ■ 動作条件：ARCore 対応 Android + Chrome。奥行き（本物が正しく沈む）は機種依存
-   ■ スタッフPCの操作卓は desk.html（4けたの操作コードで P2P 接続。両方ネット接続が必要）
    ===================================================================== */
 (() => {
   // ================= 設定（ここを編集） =================
   const SIMPLE = true;   // 浸水（高さ・にごり）と障害物だけ。車・浮遊物・側溝・マンホールは出さない
-  const LEVELS = SIMPLE ? [0, 10, 20, 30, 50, 70] : [0, 5, 10, 20, 30, 50, 70];
-  const MSG = {
-    0:  ['あめが ふりはじめた', 'まだ 水は たまっていない。足もとが 見えているね'],
-    5:  ['みぞから 水が あふれてきた！', '下水道が いっぱいで 流しきれない。これが 内水氾濫'],
-    10: ['水の ふかさ 10cm', 'くつの 中に 水が 入ってくる。まだ 足もとは 見えるね'],
-    20: ['水の ふかさ 20cm', '水が にごって、足もとが 見えにくい。子どもが 歩ける ぎりぎりの 高さ。早く にげよう！'],
-    30: ['水の ふかさ 30cm', '足もとが 見えない。子どもは 歩けない。車の エンジンも とまってしまう'],
-    50: ['水の ふかさ 50cm', 'おとなでも、女の人や お年よりは 歩けない'],
-    70: ['水の ふかさ 70cm', 'おとなの 男の人も 歩けない'],
-  };
-  // 水の色とにごり。murkFrom〜murkTo（cm）の間で真水→泥水に変わる（「水位に連動」のとき）
-  const WATER = { clear: [0.67, 0.64, 0.58], mud: [0.55, 0.46, 0.35], sky: [0.83, 0.80, 0.75], murkFrom: 5, murkTo: 27 };   // 真水=明るいベージュ、泥水=茶色（長ぐつの写真の色）    // 5cmから濁りはじめ、27cmで完全な泥水（20cmで約7割）
+  const WS = window.WATER_SETTINGS;
+  // 空の照り返しの色は Unity のシェーダーと同じ
+  const WATER = { clear: WS.clearColor, mud: WS.mudColor, sky: [0.82, 0.84, 0.87] };
   const COR = { w: 1.5, len: 3.0, gutterX: 0.98, gutterW: 0.22, laneX: -2.0, manhole: { x: 0.25, z: 0.95, r: 0.3 } };
   // 3Dモデル（glTF/.glb）。同じフォルダの models/ に置くと簡易形状の代わりに使われる。無ければ簡易形状のまま。
   // size: 実物の大きさ（m）に合わせて自動で拡大縮小する基準（車=全長、その他=いちばん長い辺）。rotY: 向きの補正（度）
@@ -176,15 +52,14 @@
   };
   const S = { floorY: 0, level: 0, placed: false, t: 0, overflowT: 0, murk: 0, reveal: false, occ: true, lock: false, car: null, debris: [], debrisT: 0, mhT: 0, refract: true, reflect: true, sound: false, murkMode: 'level', debrisOn: true, opaque: false, height: 150 };
   const $ = id => document.getElementById(id);
-
-  // ---------- 対応確認 ----------
-  const startBtn = $('startBtn'), support = $('support');
-  (async () => {
-    if (!navigator.xr) { startBtn.textContent = 'この端末・ブラウザでは使えません'; support.textContent = 'AndroidのChromeで、https のページとして開いてください。'; return; }
-    const ok = await navigator.xr.isSessionSupported('immersive-ar').catch(() => false);
-    if (!ok) { startBtn.textContent = 'ARに対応していません'; support.textContent = 'ARCore（Google Play開発者サービス(AR)）対応の端末が必要です。'; return; }
-    startBtn.disabled = false; startBtn.textContent = 'ARをはじめる';
-  })();
+  const T = window.APP_TEXT, Wt = FloodUI.Water;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" })[c]);
+  // 画面の流れとボタン類（ui.js）。AR 中は #fsHud を DOM オーバーレイにする
+  FloodUI.start({
+    onEnter: enter,
+    onFinish: leave,
+    onReplace: () => { S.placed = false; cor.visible = false; },
+  });
 
   // ---------- three.js ----------
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -216,6 +91,7 @@
     uObj: { value: Array.from({ length: MAXOBJ }, () => new THREE.Vector4()) }, uObjN: { value: 0 },
     uCar: { value: new THREE.Vector4(0, 0, 0, 0) }, // x, z, 速さ(0..1), 有効
     uCam: { value: null }, uUseCam: { value: 0 }, uCamFlip: { value: 0 }, uOpaque: { value: 0 }, uHorizon: { value: 0.5 }, uReflect: { value: 1 },
+    uOpacity: { value: WS.clearOpacity }, uMudOpacity: { value: WS.mudOpacity }, uRefract: { value: WS.refract }, uFoam: { value: WS.foamMud }, uFlowSpeed: { value: WS.flowSpeed }, uWaveK: { value: 1 },
     uClear: { value: new THREE.Vector3(...WATER.clear) }, uMud: { value: new THREE.Vector3(...WATER.mud) }, uSky: { value: new THREE.Vector3(...WATER.sky) },
   };
   const waterMat = new THREE.ShaderMaterial({
@@ -229,6 +105,7 @@
       uniform float uTime, uMurk, uLevel, uSpread, uPuddle, uGutterX, uUseDepth; uniform sampler2D uDepth; uniform mat4 uDepthMat; uniform vec4 uVp; uniform vec2 uDepthTexel;
       uniform vec3 uCamPos, uSun, uClear, uMud, uSky; uniform vec4 uObj[MAXOBJ]; uniform int uObjN; uniform vec4 uCar;
       uniform sampler2D uCam; uniform float uUseCam, uCamFlip, uOpaque, uHorizon, uReflect;
+      uniform float uOpacity, uMudOpacity, uRefract, uFoam, uFlowSpeed, uWaveK;
       varying vec3 vLocal; varying float vViewZ; varying vec3 vWorld;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
       float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y); }
@@ -285,59 +162,57 @@
         // 法線（有限差分）
         float e = 0.012;
         float h0 = height(p), hx = height(p + vec2(e,0.0)), hz = height(p + vec2(0.0,e));
-        vec3 n = normalize(vec3(-(hx-h0)/e*0.05, 1.0, -(hz-h0)/e*0.05));
+        vec3 n = normalize(vec3(-(hx-h0)/e*0.05*uWaveK, 1.0, -(hz-h0)/e*0.05*uWaveK));   // 波の強さ（waveStrength）
         vec3 V = normalize(uCamPos - vWorld);
         vec3 L = normalize(uSun);
         float diff = max(0.0, dot(n, L));
         vec3 H = normalize(L + V);
         float spec = pow(max(0.0, dot(n, H)), 140.0);
         float fres = pow(1.0 - max(0.0, dot(n, V)), 3.0);
-        // 色：澄んだ雨水 → 泥水
-        vec3 col = mix(uClear, uMud, uMurk);
-        col *= 0.75 + 0.35*diff;
-        // 泥水：ゆっくり流れるにごりの帯（濃淡）
-        float band = noise(vec2(x*1.6 + uTime*0.25, z*3.0)) * noise(vec2(x*4.0 - uTime*0.15, z*1.5 + 2.0));
-        col += (band - 0.25) * 0.18 * uMurk;
-        // カメラ映像の屈折：水越しに床がゆがんで透けて見える
-        if (uUseCam > 0.5 && uOpaque < 0.5) {
+        // ---------- 色：Unity の FloodWater.shader と同じ決め方 ----------
+        // カメラ映像：屈折（足もとがゆがんで透ける）と映り込み（水平線で上下に折り返す）
+        bool haveCam = uUseCam > 0.5;
+        vec3 refr = uSky, refl = uSky;
+        if (haveCam) {
           vec2 uv = vec2((gl_FragCoord.x - uVp.x) / uVp.z, (gl_FragCoord.y - uVp.y) / uVp.w);
           if (uCamFlip > 0.5) uv.y = 1.0 - uv.y;
-          vec2 off = n.xz * (0.06 / max(0.5, vViewZ));
-          vec3 cam = texture2D(uCam, clamp(uv + off, 0.0, 1.0)).rgb;
-          // 深いほど・濁るほど床は見えなくなる
-          float see = pow(1.0 - uMurk, 2.0) * exp(-uLevel * 4.0);
-          col = mix(col, cam * mix(vec3(0.85,0.92,0.9), vec3(0.75,0.65,0.5), uMurk), see * 0.85);
+          vec2 dist = n.xz * 8.0;
+          refr = texture2D(uCam, clamp(uv + dist * uRefract, 0.0, 1.0)).rgb;
+          vec2 uvr = vec2(uv.x, 2.0 * uHorizon - uv.y) + dist * (uRefract * 2.0 + 0.01);
+          bool reflOk = uvr.y > 0.0 && uvr.y < 1.0;
+          if (reflOk) refl = texture2D(uCam, clamp(uvr, 0.0, 1.0)).rgb;
+          // 映り込みは水平線から離れるほど薄く（遠くの物ほどはっきり映る）
+          refl = mix(uSky, refl, clamp((uHorizon - uv.y) * 2.5 + 0.35, 0.0, 1.0));
         }
-        float foam = smoothstep(0.78, 0.95, h0);          // 波頭の泡
-        col = mix(col, vec3(0.86, 0.88, 0.82), foam*0.7*(1.0-0.5*uMurk));
-        col += vec3(0.9, 0.9, 0.85) * spec * (0.5 + 0.3*uMurk);
-        // 映り込み：カメラ映像を水平線で上下に折り返して映す（写真で長ぐつが水に映るのと同じ）
-        float glare = fres * 0.6 + pow(fres, 0.5) * 0.12;
-        if (uUseCam > 0.5 && uReflect > 0.5) {
-          vec2 uvr = vec2((gl_FragCoord.x - uVp.x) / uVp.z, (gl_FragCoord.y - uVp.y) / uVp.w);
-          if (uCamFlip > 0.5) uvr.y = 1.0 - uvr.y;
-          vec2 wob = n.xz * 0.12 + vec2(sin(vWorld.z*18.0 + uTime*2.0), 0.0) * 0.006;
-          float ry = 2.0 * uHorizon - uvr.y;      // 水平線から同じ距離だけ上
-          vec3 refl = uSky;
-          if (ry > 0.0 && ry < 1.0) refl = texture2D(uCam, clamp(vec2(uvr.x, ry) + wob, 0.0, 1.0)).rgb;
-          refl = mix(refl, uSky, 0.25);
-          float k = clamp(0.35 + fres * 0.6, 0.0, 0.9) * (1.0 - 0.25*uMurk);
-          col = mix(col, refl * (0.8 + 0.2*diff), k);
-        } else {
-          col = mix(col, uSky, clamp(glare, 0.0, 0.85));
+        // 真水：足もとの映像に色を乗せ、映り込みを重ねる
+        vec3 clearCol = mix(refr, refr * uClear * 1.15, uOpacity * 0.8);
+        clearCol = mix(clearCol, refl, clamp(fres * 0.6 + 0.15, 0.0, 1.0) * uReflect);
+        // 泥水：流れ（右→左）に沿って伸びる細かい泡
+        float adv = uTime * uFlowSpeed;
+        vec2 fc = vec2((-x - adv) * 8.0, z * 32.0);
+        float foamN = noise(fc) * 0.65 + noise(fc * 2.3 + vec2(adv * 0.5, 0.0)) * 0.35;
+        float foam = smoothstep(0.62, 0.70, foamN) * uFoam * 0.6;
+        foam *= clamp(1.0 - (length(uCamPos - vWorld) - 1.5) / 6.0, 0.0, 1.0);   // 遠くはちらつくので薄く
+        float grain = noise(p * 48.0 + vec2(adv * 0.5, 0.0)) * 2.0 - 1.0;
+        vec3 mudBase = uMud * (0.85 + h0 * 0.35) * (1.0 + grain * 0.05);
+        vec3 foamCol = mix(vec3(0.93, 0.88, 0.80), uMud, 0.35);                    // 泥色を 35% 混ぜたベージュ
+        vec3 mudCol = mix(mudBase, foamCol, clamp(foam, 0.0, 1.0));
+        mudCol = mix(mudCol, refl, clamp(fres * 0.5, 0.0, 1.0) * uReflect * 0.12);
+        // 足もとの映像をどれだけ透かすか。浅いほど透け、uMudOpacity を下げると濃い泥水でも透ける
+        float show = clamp((1.0 - uMurk) * 0.5 + (1.0 - uMudOpacity), 0.0, 1.0);
+        if (haveCam) mudCol = mix(mudCol, refr * 0.6 + mudCol * 0.4, show);
+        vec3 col = mix(clearCol, mudCol, uMurk);
+        col += vec3(0.9, 0.9, 0.85) * spec * 0.35;                                  // ハイライト
+        // 足もとを完全に隠す
+        col = mix(col, mix(uMud, foamCol, clamp(foam, 0.0, 1.0) * 0.7), uOpaque);
+        // 透明度：カメラ映像があれば Unity と同じ。無いときは本物の映像に重ねるので、透け具合を透明度で出す
+        float a = mix(0.9, 1.0, max(uMurk, uOpaque));
+        if (!haveCam) {
+          float aClear = clamp(uOpacity * 0.6 + fres * 0.6 * uReflect, 0.0, 0.95);
+          float aMud = 1.0 - 0.6 * show;
+          a = mix(mix(aClear, aMud, uMurk), 1.0, uOpaque);
         }
-        // 雨粒の飛沫と広がる輪（写真の白い点々）
-        { vec2 g2 = floor(p*9.0); vec2 c2 = (g2 + 0.5 + (vec2(hash(g2+5.0), hash(g2+17.0)) - 0.5)*0.7) / 9.0;
-          float t2 = hash(g2+23.0)*3.0; float ph2 = fract((uTime + t2)*1.8);
-          float d2 = length(p - c2); float ring = ph2*0.05;
-          float rg = smoothstep(0.006, 0.0, abs(d2 - ring)) * (1.0 - ph2) * 0.35;
-          float dot2 = smoothstep(0.012, 0.0, d2) * step(ph2, 0.2) * (1.0 - ph2*5.0) * 0.7;
-          col = mix(col, vec3(0.96, 0.97, 0.96), clamp(rg + dot2, 0.0, 1.0)); }
-        float a = mix(0.45, 0.97, uMurk);            // 真水は少し透ける／泥水はほぼ不透明
-        a = mix(a, 0.98, fres*0.7);                        // 斜めから見るほど不透明（照り返し）
-        a += foam*0.15;
         if (uPuddle > 0.5) a *= 0.8 * edgeA;
-        if (uOpaque > 0.5) { a = 1.0; }   // 足元を完全に隠す設定
         // 物との境界：少し明るい水際の線を入れて、段差をなじませる
         float edge = smoothstep(0.05, 0.45, occ) * (1.0 - smoothstep(0.45, 0.95, occ));
         col = mix(col, vec3(0.92, 0.92, 0.88), edge * 0.45);
@@ -468,62 +343,12 @@
   }
 
   if (SIMPLE) { gutter.visible = false; cor.children.forEach(o => { if (o.userData.grate) o.visible = false; }); mhHole.visible = false; mhLid.visible = false; spout.visible = false; revealRing.visible = false; }
-
-  // ---------- 状態の反映 ----------
-  const lvDiv = $('lv');
-  LEVELS.forEach(l => { const b = document.createElement('button'); b.id = 'lv' + l; b.textContent = l === 0 ? '0' : l === 5 ? 'あふれ' : l; b.addEventListener('click', () => setLevel(l)); lvDiv.appendChild(b); });
-  function stageOf(l) { let st = 0; LEVELS.forEach(x => { if (x !== 5 && x <= l) st = x; }); return st; }
-  function setLevel(l) {
-    l = Math.max(0, Math.min(70, Math.round(l)));
-    const prev = S.level; S.level = l;
-    const st = stageOf(l);
-    LEVELS.forEach(x => $('lv' + x).setAttribute('aria-pressed', String(x === l)));
-    if ($('lvSlider')) { $('lvSlider').value = l; $('lvVal').textContent = l + 'cm'; }
-    if (typeof gaugeSync === 'function') gaugeSync();
-    $('mT').textContent = (l === 0 ? MSG[0][0] : l === 5 ? MSG[5][0] : '水の ふかさ ' + l + 'cm'); $('mS').textContent = MSG[l === 5 ? 5 : st][1];
-    if (l === 5 && prev !== 5) S.overflowT = 0;
-    if (l >= 20 && prev < 20 && !SIMPLE) { S.mhT = S.t; if (S.sound) snd.alarm(); }
-    if (l === 0) { S.mhT = 0; S.murk = 0; S.debris.forEach(m => debrisGroup.remove(m)); S.debris = []; S.car = null; car.visible = false; }
-    const f = $('fT');
-    if (l >= 20 && l < 70) { f.hidden = false; f.textContent = 'かさや ぼうで 足もとを たしかめよう'; }
-    else if (l >= 70) { f.hidden = false; f.textContent = 'こうなる 前に にげよう'; }
-    else f.hidden = true;
-  }
-  function nextLevel() { const n = LEVELS.find(x => x > S.level && x !== 5); if (n !== undefined) setLevel(n); }
-  function prevLevel() { let p = 0; LEVELS.forEach(x => { if (x < S.level && x !== 5) p = x; }); setLevel(p); }
-  $('lvSlider').addEventListener('input', e => setLevel(+e.target.value));
-  // ---------- 縦の水位スケール（右端）：タップ／ドラッグで水位を変える ----------
-  const gauge = $('gauge'), gFill = $('gFill'), gKnob = $('gKnob');
-  const GMAX = 70;
-  LEVELS.filter(l => l !== 5).forEach(l => { const t = document.createElement('div'); t.className = 'tick'; t.style.bottom = (l / GMAX * 100) + '%'; t.innerHTML = '<span>' + l + (l ? '' : '') + '</span>'; gauge.appendChild(t); });
-  function gaugeSync() {
-    const pct = S.level / GMAX * 100;
-    gFill.style.height = pct + '%'; gKnob.style.top = (100 - pct) + '%'; gKnob.textContent = S.level;
-    const m = Math.min(1, Math.max(0, S.murk));
-    const c = [0, 1, 2].map(i => Math.round((WATER.clear[i] + (WATER.mud[i] - WATER.clear[i]) * m) * 255));
-    gFill.style.background = 'rgb(' + c.join(',') + ')';
-  }
-  function gaugeLevelFromY(clientY) {
-    const r = gauge.getBoundingClientRect();
-    let l = Math.round((1 - (clientY - r.top) / r.height) * GMAX);
-    l = Math.max(0, Math.min(GMAX, l));
-    const snap = LEVELS.find(x => x !== 5 && Math.abs(x - l) <= 3);   // 目盛りの近くは目盛りに吸いつく
-    return snap !== undefined ? snap : l;
-  }
-  let gDrag = false;
-  gauge.addEventListener('pointerdown', e => { gDrag = true; gauge.setPointerCapture(e.pointerId); gKnob.classList.add('drag'); gFill.classList.add('drag'); setLevel(gaugeLevelFromY(e.clientY)); e.stopPropagation(); e.preventDefault(); });
-  gauge.addEventListener('pointermove', e => { if (gDrag) setLevel(gaugeLevelFromY(e.clientY)); });
-  const gEnd = e => { gDrag = false; gKnob.classList.remove('drag'); gFill.classList.remove('drag'); };
-  gauge.addEventListener('pointerup', gEnd); gauge.addEventListener('pointercancel', gEnd);
-
-  let floorOff = 0; try { floorOff = +localStorage.getItem('floorOff') || 0; } catch (e) {}
-  function nudgeFloor(d) { floorOff += d; try { localStorage.setItem('floorOff', String(floorOff)); } catch (e) {} if (S.placed) cor.position.y = S.floorY + floorOff; $('hintT').textContent = '床の高さ補正 ' + (floorOff * 100).toFixed(0) + 'cm'; $('hint').hidden = false; clearTimeout(nudgeFloor.t); nudgeFloor.t = setTimeout(() => { $('hint').hidden = true; }, 1200); }
-  $('floorUp').addEventListener('click', () => nudgeFloor(0.01));
-  $('floorDown').addEventListener('click', () => nudgeFloor(-0.01));
-  const MURK_NAME = { level: '連動', clear: '真水', mud: '泥水', auto: '自動' };
-  function setMurkMode(m) { S.murkMode = m; }
-  function setOpaque(on) { S.opaque = on; }
-  $('sndBtn').addEventListener('click', e => { S.sound = !S.sound; e.target.setAttribute('aria-pressed', String(S.sound)); if (S.sound) snd.start(); else snd.stop(); });
+  // ---------- 状態の反映（水位・にごり・不透明・床補正は ui.js の Water が持つ） ----------
+  Wt.onChange(() => {
+    const prev = S.level, l = Wt.levelCm; S.level = l;
+    if (l >= 20 && prev < 20 && !SIMPLE) S.mhT = S.t;
+    if (l === 0) { S.mhT = 0; S.debris.forEach(m => debrisGroup.remove(m)); S.debris = []; S.car = null; car.visible = false; }
+  });
   // ---------- 音（雨・流れ・湧き出し・車） ----------
   const snd = (() => {
     let ac = null, rain = null, flow = null, flowGain = null, bub = null, bubGain = null, eng = null, engGain = null, tick = 0;
@@ -553,39 +378,6 @@
       alarm() { const a = ctxInit(); [0, 0.35, 0.7].forEach(t => { const o = a.createOscillator(); o.type = 'square'; o.frequency.value = 1100; const g = a.createGain(); g.gain.value = 0.12; o.connect(g).connect(a.destination); o.start(a.currentTime + t); o.stop(a.currentTime + t + 0.25); }); },
     };
   })();
-  $('barBtn').addEventListener('click', e => { const off = $('ov').classList.toggle('nobar'); e.target.textContent = off ? 'ボタンを出す' : 'ボタンをかくす'; });
-  window.addEventListener('keydown', e => {
-    const k = e.key; let hit = true;
-    if (k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'Enter') nextLevel();
-    else if (k === 'ArrowLeft' || k === 'PageUp') prevLevel();
-    else if (k === 'Home' || k === '0') setLevel(0);
-    else if (k >= '1' && k <= '7' && LEVELS[+k - 1] !== undefined) setLevel(LEVELS[+k - 1]);
-    else if (k === 'm' || k === 'M') setMurkMode(S.murkMode === 'level' ? 'clear' : S.murkMode === 'clear' ? 'mud' : 'level');
-    else if (k === 'o' || k === 'O') setOpaque(!S.opaque);
-    else if (k === 'c' || k === 'C') startCar();
-    else hit = false;
-    if (hit) e.preventDefault();
-  });
-
-
-  // ---------- スタッフの操作卓（desk.html）とつなぐ ----------
-  let deskConn = null, deskSeen = 0, deskCarSeen = 0;
-  function joinDesk(code, onState) {
-    if (!code || typeof Peer === 'undefined') return;
-    try { localStorage.setItem('deskCode', code); } catch (e) {}
-    const peer = new Peer();
-    const connect = () => {
-      const c = peer.connect('floodscope-' + code, { reliable: true });
-      c.on('open', () => { deskConn = c; onState({ connected: true }); });
-      c.on('data', d => { if (!d || typeof d.epoch !== 'number' || d.epoch < deskSeen) return; deskSeen = d.epoch; onState(d); });
-      c.on('close', () => { deskConn = null; onState({ connected: false }); setTimeout(connect, 2000); });
-      c.on('error', () => { deskConn = null; setTimeout(connect, 3000); });
-    };
-    peer.on('open', connect);
-    peer.on('disconnected', () => setTimeout(() => { try { peer.reconnect(); } catch (e) {} }, 1500));
-  }
-
-  try { const c = localStorage.getItem('deskCode'); if (c) $('deskCode').value = c; } catch (e) {}
 
   // ---------- XRセッション ----------
   let session = null, refSpace = null, viewerSpace = null, hitSource = null, depthOK = false, glBinding = null;
@@ -596,26 +388,15 @@
     gutter.position.x = COR.gutterX + COR.gutterW / 2;
     cor.children.forEach(o => { if (o.userData.grate) o.position.x = COR.gutterX + COR.gutterW / 2; });
   }
-  startBtn.addEventListener('click', async () => {
-    applyWidth(+document.querySelector('input[name=w]:checked').value);
-    S.refract = $('optRefract').checked; S.reflect = $('optReflect').checked;
-    S.occ = $('optOcc').checked;
-    setMurkMode($('optMurk').value); setOpaque($('optOpaque').checked);
-    S.sound = $('optSound').checked; $('sndBtn').setAttribute('aria-pressed', String(S.sound)); if (S.sound) snd.start();
-    const goggle = document.querySelector('input[name=view]:checked').value === 'goggle';
-    if (goggle) { $('ov').classList.add('nobar'); $('barBtn').textContent = 'ボタンを出す'; }
-    const code = $('deskCode').value.trim();
-    if (code) joinDesk(code, d => {
-      if (d.connected === true) { $('ov').classList.add('nobar'); $('barBtn').textContent = 'ボタンを出す'; }
-      if (typeof d.level === 'number' && d.level !== S.level) setLevel(d.level);
-      if (typeof d.reveal === 'boolean') S.reveal = d.reveal;
-      if (typeof d.lock === 'boolean') S.lock = d.lock;
-      if (d.murk === 'auto' || d.murk === 'clear' || d.murk === 'mud' || d.murk === 'level') { if (d.murk !== S.murkMode) setMurkMode(d.murk); }
-      if (typeof d.debris === 'boolean') S.debrisOn = d.debris;
-      if (typeof d.opaque === 'boolean' && d.opaque !== S.opaque) setOpaque(d.opaque);
-      if (typeof d.height === 'number' && d.height >= 100 && d.height <= 200 && d.height !== S.height) { S.height = d.height; }
-      if (typeof d.car === 'number' && d.car > deskCarSeen) { deskCarSeen = d.car; startCar(); }
-    });
+  // AR が使えるかは先に調べておく（ボタンを押してから待たせない）
+  let xrSupported = null;
+  if (navigator.xr) navigator.xr.isSessionSupported('immersive-ar').then(ok => { xrSupported = ok; }).catch(() => { xrSupported = false; });
+  else xrSupported = false;
+
+  // 「タブレットで見る」「ゴーグルで見る」：AR をはじめる（ボタンを押した瞬間に呼ばれる）
+  async function enter() {
+    if (xrSupported === false) throw { html: esc(T.noAR) + '<br><a href="index.html">' + esc(T.noARLink) + '</a>' };
+    applyWidth(COR.w);
     // 奥行きの指定はブラウザの版で名前が違うので、順に試す（最後は奥行きなし）
     const tries = [
       { depthSensing: { usagePreference: ['cpu-optimized', 'gpu-optimized'], dataFormatPreference: ['unsigned-short', 'float32'] } },
@@ -625,13 +406,13 @@
     ];
     let lastErr = null; session = null;
     for (const t of tries) {
-      const init = { requiredFeatures: ['hit-test', 'local-floor'], optionalFeatures: ['dom-overlay', 'camera-access'], domOverlay: { root: $('ov') } };
+      const init = { requiredFeatures: ['hit-test', 'local-floor'], optionalFeatures: ['dom-overlay', 'camera-access'], domOverlay: { root: FloodUI.hudRoot } };
       if (t) { init.optionalFeatures.push('depth-sensing'); init.depthSensing = t.depthSensing; }
       try { session = await navigator.xr.requestSession('immersive-ar', init); break; }
       catch (e) { lastErr = e; }
     }
-    if (!session) { support.textContent = 'ARを開始できませんでした：' + (lastErr && lastErr.message); return; }
-    $('home').style.display = 'none'; $('ov').classList.add('on'); document.body.appendChild(renderer.domElement);
+    if (!session) throw { message: lastErr && lastErr.message };
+    document.body.appendChild(renderer.domElement);
     renderer.xr.setReferenceSpaceType('local-floor');
     await renderer.xr.setSession(session);
     refSpace = renderer.xr.getReferenceSpace();
@@ -640,56 +421,56 @@
     catch (e) { hitSource = await session.requestHitTestSource({ space: viewerSpace }); }
     depthOK = !!(session.depthUsage);
     try { glBinding = new XRWebGLBinding(session, renderer.getContext()); } catch (e) { glBinding = null; }
-    session.addEventListener('end', () => { snd.stop(); $('ov').classList.remove('on'); $('home').style.display = ''; renderer.domElement.remove(); session = null; S.placed = false; cor.visible = false; setLevel(0); });
+    session.addEventListener('end', onEnd);
     session.addEventListener('select', onSelect);
-    setLevel(0); S.placed = false; $('hint').hidden = false;
+    // ゴーグルモード中の長押し（画面に触れている間）
+    session.addEventListener('selectstart', () => FloodUI.press(true));
+    session.addEventListener('selectend', () => FloodUI.press(false));
+    S.placed = false; cor.visible = false;
     renderer.setAnimationLoop(render);
-  });
-  $('exitBtn').addEventListener('click', () => { if (session) session.end(); });
+  }
+  // 「終わる」：AR を閉じる（説明画面へは ui.js が戻す）
+  function leave() { if (session) session.end(); }
+  function onEnd() {
+    renderer.setAnimationLoop(null); renderer.domElement.remove();
+    session = null; hitSource = null; S.placed = false; cor.visible = false;
+    if (!FloodUI.hudRoot.hidden) FloodUI.finish();       // 端末の戻る操作などで AR が終わったときも説明画面へ
+  }
+  // ボタンやスケールに触れたときは床タップ（select）にしない
+  FloodUI.hudRoot.addEventListener('beforexrselect', e => { if (e.target.closest && e.target.closest('button,#fsHit')) e.preventDefault(); });
 
+  // 床の設定（FloorPlacer）：レティクルの位置を通路の入口＝水位0の基準にする
   function onSelect() {
-    if (!S.placed) {
-      if (!reticle.visible) return;
-      // 通路の入口＝レティクル位置。向き＝カメラの向き（水平）
-      const pos = new THREE.Vector3().setFromMatrixPosition(reticle.matrix);
-      const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); dir.y = 0; dir.normalize();
-      // 床の高さ：タップ位置と、端末が推定した床（local-floor の y=0）の低い方を採用（マットの上をタップしても床に合う）
-      S.floorY = Math.min(pos.y, 0); if (Math.abs(pos.y) > 0.25) S.floorY = pos.y; // 床推定が大きく外れているときはタップ位置を信じる
-      pos.y = S.floorY + floorOff;
-      cor.position.copy(pos); cor.rotation.set(0, Math.atan2(dir.x, dir.z), 0); // ローカル+zが向いている方向
-      cor.visible = true; S.placed = true; $('hint').hidden = true;
-      return;
-    }
-    // 水位はボタン（またはスタッフのPC）だけで変える。画面タップでは変えない
+    if (FloodUI.placed || !reticle.visible) return;
+    // 通路の入口＝レティクル位置。向き＝カメラの向き（水平）
+    const pos = new THREE.Vector3().setFromMatrixPosition(reticle.matrix);
+    const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); dir.y = 0; dir.normalize();
+    // 床の高さ：タップ位置と、端末が推定した床（local-floor の y=0）の低い方を採用（マットの上をタップしても床に合う）
+    S.floorY = Math.min(pos.y, 0); if (Math.abs(pos.y) > 0.25) S.floorY = pos.y; // 床推定が大きく外れているときはタップ位置を信じる
+    pos.y = S.floorY;
+    cor.position.copy(pos); cor.rotation.set(0, Math.atan2(dir.x, dir.z), 0); // ローカル+zが向いている方向
+    cor.visible = true; S.placed = true;
+    FloodUI.setPlaced(true);
   }
 
   // ---------- 雨の筋（画面に重ねる2Dキャンバス） ----------
-  const rainCv = $('rain'), rctx = rainCv.getContext('2d');
+  const rainCv = $('fsRain'), rctx = rainCv.getContext('2d');
   function drawRain() {
     const W = rainCv.clientWidth, H = rainCv.clientHeight; if (!W || !H) return;
     if (rainCv.width !== W || rainCv.height !== H) { rainCv.width = W; rainCv.height = H; }
     rctx.clearRect(0, 0, W, H);
-    rctx.lineWidth = 1; rctx.strokeStyle = 'rgba(225,232,240,0.36)'; rctx.beginPath();
-    for (let i = 0; i < 70; i++) {
-      const sp = 0.8 + (i % 4) * 0.15, len = 16 + (i % 3) * 8;
-      const x = (((i * 97.3 - S.t * 160 * (0.5 + (i % 3) * 0.3)) % W) + W) % W;
-      const y = ((i * 53.7 + S.t * 950 * sp) % (H + 60)) - 30;
-      rctx.moveTo(x, y); rctx.lineTo(x - len * 0.35, y + len);
-    }
-    rctx.stroke();
-    rctx.lineWidth = 2; rctx.strokeStyle = 'rgba(235,240,246,0.35)'; rctx.beginPath();
-    for (let i = 0; i < 10; i++) { const x = (((i * 211.7 - S.t * 200) % W) + W) % W, y = ((i * 131.3 + S.t * 1300) % (H + 80)) - 40; rctx.moveTo(x, y); rctx.lineTo(x - 10, y + 30); }
-    rctx.stroke();
+    FloodUI.drawRain(rctx, 0, W, H, S.t);
   }
 
   let last = 0;
   function render(time, frame) {
     const dt = Math.min(0.1, (time - last) / 1000 || 0); last = time; S.t += dt;
     drawRain();
-    const lvlRaw = S.level === 5 ? 0.05 : S.level / 100, lvl = lvlRaw;
+    FloodUI.tick(dt);
+    S.placed = FloodUI.placed;
+    const shown = Wt.shownLevel, lvl = shown / 100;   // 表示上の水位（なめらかに動く）
     if (S.level === 5) S.overflowT += dt;
-    if (S.murkMode === 'level') { const t = Math.max(0, Math.min(1, (S.level - WATER.murkFrom) / (WATER.murkTo - WATER.murkFrom))); S.murk += (t - S.murk) * Math.min(1, dt * 1.5); }
-    else if (S.murkMode === 'clear') S.murk = Math.max(0, S.murk - dt); else if (S.murkMode === 'mud') S.murk = Math.min(1, S.murk + dt); else if (S.level >= 10) S.murk = Math.min(1, S.murk + dt / 20);
+    S.murk = Wt.murk;
 
     if (frame) {
       // ヒットテスト
@@ -736,17 +517,20 @@
     }
 
     // 水
-    water.visible = S.placed && S.level > 0;
-    water.position.y = (S.level === 5 ? 0.003 : lvl);
+    water.visible = S.placed && shown > 0.2;
+    water.position.y = lvl + Wt.floorOffsetCm / 100;      // 床 ±1cm の補正は水面だけを動かす（Unity と同じ）
     waterUniforms.uTime.value = S.t; waterUniforms.uMurk.value = S.murk; waterUniforms.uLevel.value = lvl;
-    waterUniforms.uOpaque.value = S.opaque ? 1 : 0;
+    waterUniforms.uOpaque.value = Wt.opaque ? 1 : 0;
+    { const u = waterUniforms; u.uOpacity.value = WS.clearOpacity; u.uMudOpacity.value = WS.mudOpacity; u.uRefract.value = WS.refract; u.uFoam.value = WS.foamMud; u.uFlowSpeed.value = WS.flowSpeed; u.uWaveK.value = WS.waveStrength / 0.4; u.uClear.value.set(...WS.clearColor); u.uMud.value.set(...WS.mudColor); }
     waterUniforms.uPuddle.value = S.level === 5 ? 1 : 0; waterUniforms.uSpread.value = Math.min(3.4, 0.1 + S.overflowT * 0.28);
     { const xr = renderer.xr.isPresenting ? renderer.xr.getCamera(camera) : camera; xr.getWorldPosition(waterUniforms.uCamPos.value);
       // 水平線の画面上の高さ（0=下,1=上）：水面と平行な遠方の点を投影する
       const cx = renderer.xr.isPresenting && xr.cameras && xr.cameras[0] ? xr.cameras[0] : xr;
       const fw = new THREE.Vector3(0, 0, -1).applyQuaternion(cx.getWorldQuaternion(new THREE.Quaternion())); fw.y = 0;
       if (fw.lengthSq() > 1e-4) { fw.normalize(); const far = waterUniforms.uCamPos.value.clone().addScaledVector(fw, 200); far.y = waterUniforms.uCamPos.value.y; far.project(cx); waterUniforms.uHorizon.value = Math.max(-1, Math.min(2, (far.y + 1) / 2)); } }
-    waterUniforms.uReflect.value = S.reflect ? 1 : 0;
+    waterUniforms.uReflect.value = S.reflect ? Wt.reflect : 0;
+    // カメラが水面より下に入ったら水中（端末を下げたとき）
+    FloodUI.setUnderwater(water.visible && waterUniforms.uCamPos.value.y < cor.position.y + water.position.y - 0.01);
     { let n = 0; S.debris.forEach(m => { if (n < MAXOBJ) { waterUniforms.uObj.value[n].set(m.position.x, m.position.z, m.userData.ph, 0); n++; } }); waterUniforms.uObjN.value = n; }
     if (S.car && car.visible) waterUniforms.uCar.value.set(car.position.x, car.position.z, S.car.stalled ? 0 : 1, 1); else waterUniforms.uCar.value.w = 0;
     // マンホール（SIMPLE=false のみ）
@@ -758,8 +542,6 @@
     if (spout.visible && !SIMPLE) spout.children.forEach((st, i) => { const hgt = (0.3 + 0.5 * Math.sin(age * 3 + i)) * (1 - age / 4); st.scale.y = Math.max(0.05, hgt / 0.6); st.position.set(mh.x + Math.cos(st.userData.a) * mh.r * 0.6, hgt / 2, mh.z + Math.sin(st.userData.a) * mh.r * 0.6); st.rotation.z = Math.cos(st.userData.a) * 0.4; st.rotation.x = -Math.sin(st.userData.a) * 0.4; });
     revealRing.visible = !SIMPLE && S.reveal && S.placed;
     updateDebris(dt, lvl); updateCar(dt, lvl); if (S.sound) snd.update(dt);
-    if ((S.t * 10 | 0) % 3 === 0) gaugeSync();
-    const f = $('fT'); if (S.car && S.car.stalled && S.level < 70 && f.hidden) { f.hidden = false; f.textContent = '水の深さ30cmで 車の エンジンが とまった'; }
     renderer.render(scene, camera);
   }
 })();
