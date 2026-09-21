@@ -4,300 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>【AR体験】しん水スコープ</title>
-</head>
-<body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;700&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;900&display=swap">
+<link rel="stylesheet" href="ui.css">
 <style>
-  :root{
-    --bg:#f2f4ee; --panel:#ffffff; --ink:#1c2733; --muted:#5b6770; --line:#d6dbd2;
-    --accent:#1f6f8b; --accent-ink:#ffffff; --warn:#e8912d; --danger:#c8352e;
-    --water:#6f7d5b; --sky:#c9d3dc; --btn:#e7ebe3;
-    --k-yellow:#f2e700; --k-red:#ff2800; --k-purple:#aa00aa; --k-black:#0c000c;
-  }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --bg:#151a1e; --panel:#1f262c; --ink:#eef1ec; --muted:#a4adb3; --line:#334048;
-      --accent:#5fb3cf; --accent-ink:#0f1a20; --btn:#2a343b;
-    }
-  }
-  :root[data-theme="dark"]{
-    --bg:#151a1e; --panel:#1f262c; --ink:#eef1ec; --muted:#a4adb3; --line:#334048;
-    --accent:#5fb3cf; --accent-ink:#0f1a20; --btn:#2a343b;
-  }
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans JP",system-ui,sans-serif;line-height:1.6;-webkit-text-size-adjust:100%}
-  h1,h2,h3,.disp{font-family:"Zen Maru Gothic","Noto Sans JP",system-ui,sans-serif;text-wrap:balance}
-  .screen{display:none;min-height:100%;box-sizing:border-box;padding-block:20px 32px;padding-inline:16px;max-width:720px;margin:0 auto}
-  .screen.on{display:block}
-  .eyebrow{font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
-  h1{font-size:30px;margin:6px 0 4px;font-weight:900;line-height:1.25}
-  h1 .tag{display:block;font-size:16px;color:var(--accent);letter-spacing:.04em}
-  .sub{font-family:"Zen Maru Gothic","Noto Sans JP",sans-serif;font-weight:700;font-size:16px;color:var(--muted);margin:0 0 12px}
-  h2{font-size:20px;margin:26px 0 8px;font-weight:700}
-  p{margin:6px 0}
-  .lead{color:var(--muted);font-size:15px}
-  .menu{display:grid;gap:12px;margin-top:18px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;text-align:left;color:var(--ink);cursor:pointer;font:inherit;display:grid;grid-template-columns:52px 1fr;gap:14px;align-items:center}
-  .card:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-  .card .ic{width:52px;height:52px;border-radius:12px;background:var(--btn);display:grid;place-items:center}
-  .card b{font-family:"Zen Maru Gothic",sans-serif;font-size:18px;display:block}
-  .card small{color:var(--muted);font-size:13px}
-  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-  .chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 14px;font:inherit;color:var(--ink);cursor:pointer}
-  .chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-  .note{font-size:13px;color:var(--muted)}
-  .back{background:none;border:0;color:var(--accent);font:inherit;font-weight:700;padding:0;cursor:pointer;margin-bottom:8px}
-  table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
-  th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}
-  th{font-weight:700;color:var(--muted);font-size:12px;letter-spacing:.06em}
-  .lvl{display:inline-block;min-width:3.2em;font-family:"Zen Maru Gothic",sans-serif;font-weight:900;font-size:18px}
-  .kk{display:grid;gap:8px;margin-top:10px}
-  .kk div{display:grid;grid-template-columns:56px 1fr;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
-  .kk i{display:block;height:40px;border-radius:8px}
-  ol{padding-left:1.3em}
-  li{margin:6px 0}
-  .step{display:flex;align-items:center;gap:10px;margin-top:22px}
-  .step h2{margin:0}
-  .step .num{width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font:900 15px "Zen Maru Gothic",sans-serif;display:grid;place-items:center;flex:none}
-  .chip{font-size:15px;padding:9px 16px}
-  details.staff{margin-top:26px;border-top:1px dashed var(--line);padding-top:12px}
-  details.staff summary{cursor:pointer;color:var(--muted);font-weight:700;font-size:14px}
-
-  /* experience */
+  html,body{height:100%;margin:0;background:#000;overflow:hidden}
+  /* 体験画面：カメラ映像＋水を描くキャンバス（ボタン類は ui.js の #fsHud が上に重なる） */
   #exp{position:fixed;inset:0;background:#000;display:none;z-index:10;touch-action:none;user-select:none;-webkit-user-select:none}
   #exp.on{display:block}
-  #cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
-  #cam{opacity:0}
+  #cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;opacity:0}
   #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
-  #hud{position:absolute;left:0;right:0;bottom:0;padding:10px 12px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;background:linear-gradient(transparent,rgba(0,0,0,.55))}
-  #hud .lv{display:flex;gap:6px}
-  #hud .lv button{flex:1;padding:14px 0;border-radius:10px;border:0;font:900 17px "Zen Maru Gothic",sans-serif;background:rgba(255,255,255,.9);color:#1c2733;cursor:pointer}
-  #hud .lv button[aria-pressed="true"]{background:#e8912d;color:#1c2733}
-  #hud .sl{display:flex;gap:10px;align-items:center;color:#fff;font:700 14px 'Zen Maru Gothic',sans-serif}
-  #hud .sl input{flex:1;height:28px}
-  #hud .sl span{min-width:3.5em;text-align:right}
-  #hud .tools{display:flex;gap:6px;flex-wrap:wrap}
-  #hud .tools button{flex:1 1 40%;padding:10px 0;border-radius:10px;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.35);color:#fff;font:600 13px "Noto Sans JP",sans-serif;cursor:pointer}
-  #hud .tools button[aria-pressed="true"]{background:rgba(255,255,255,.9);color:#1c2733}
-  #calPanel{background:rgba(0,0,0,.6);border-radius:12px;padding:10px 12px;display:grid;gap:6px;color:#fff;font-size:13px}
-  #calPanel label{display:grid;grid-template-columns:5em 1fr 4em;gap:8px;align-items:center}
+  /* 係員用：通路と障害物の位置合わせ（リモコンの K で開閉） */
+  #calPanel{position:fixed;z-index:30;top:calc(8px + env(safe-area-inset-top,0px));left:8px;right:8px;max-width:560px;margin:0 auto;background:rgba(0,0,0,.72);border-radius:14px;padding:12px 14px;display:grid;gap:8px;color:#fff;font:500 14px "Zen Maru Gothic",sans-serif}
+  #calPanel[hidden]{display:none}
+  #calPanel label{display:grid;grid-template-columns:5.5em 1fr 4em;gap:8px;align-items:center}
   #calPanel input[type=range]{width:100%}
-  #calPanel select{font:inherit;padding:4px;border-radius:6px}
-  #calPanel .row2{display:flex;gap:6px;flex-wrap:wrap}
-  #calPanel .row2 button{flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.35);color:#fff;font:600 12px "Noto Sans JP",sans-serif}
-  #calPanel .row2 button[aria-pressed="true"]{background:rgba(255,255,255,.9);color:#1c2733}
-  #exp.stereo #calPanel{display:none}
-  #calPanel[hidden],#more[hidden]{display:none}
-  #exp.nohud #hud{display:none}
-  #hud .lv,#hud .sl{display:none}   /* 水位は右端の縦スケールで変える */
-  /* 縦の水位スケール（量水標） */
-  #gauge{position:absolute;right:8px;top:27%;bottom:21%;width:70px;touch-action:none;user-select:none;-webkit-user-select:none;pointer-events:auto}
-  #gauge .track{position:absolute;z-index:1;left:14px;top:0;bottom:0;width:16px;border-radius:9px;background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.7);overflow:hidden}
-  #gauge .fill{position:absolute;left:0;right:0;bottom:0;height:0;background:#5f8a8e;transition:height .25s,background .5s}
-  #gauge .tick{position:absolute;z-index:2;left:8px;width:28px;height:0;border-top:2px solid rgba(255,255,255,.95);transform:translateY(-1px)}
-  #gauge .tick span{position:absolute;left:32px;top:-10px;font:700 13px "Zen Maru Gothic","Noto Sans JP",sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);white-space:nowrap}
-  #gauge .knob{position:absolute;z-index:3;left:3px;width:38px;height:38px;border-radius:50%;background:#e8912d;color:#1c2733;transform:translateY(-50%);display:grid;place-items:center;font:900 14px "Zen Maru Gothic",sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.45);transition:top .25s}
-  #gauge .knob.drag{transition:none}
-  #gauge .fill.drag{transition:none}
-  #gauge .cap{position:absolute;left:0;right:0;top:-26px;text-align:center;font:700 12px "Noto Sans JP",sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8)}
-  #exp.nohud #gauge,#exp.stereo #gauge{display:none}
-  @media (max-height:520px){ #gauge{top:16%;bottom:22%} }
-  #topbar{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px;pointer-events:none}
-  #topbar button{pointer-events:auto;border:0;border-radius:999px;padding:8px 14px;background:rgba(0,0,0,.45);color:#fff;font:700 13px "Noto Sans JP",sans-serif;cursor:pointer}
-  #exp.stereo #hud{display:none}
-  #exp.stereo #topbar #exitBtn{opacity:.6}
-  #remoteBadge{background:rgba(58,166,87,.85)!important}
-  /* control desk */
-  .desk{display:grid;gap:14px}
-  .status{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px}
-  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#9aa3a8;margin-right:6px;vertical-align:middle}
-  .dot.on{background:#3aa657}
-  .biglv{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
-  .biglv button{padding:22px 0;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:900 22px "Zen Maru Gothic",sans-serif;cursor:pointer;font-variant-numeric:tabular-nums}
-  .biglv button small{display:block;font:600 11px "Noto Sans JP",sans-serif;color:var(--muted);margin-top:2px}
-  .biglv button[aria-pressed="true"]{background:var(--warn);border-color:var(--warn);color:#1c2733}
-  .biglv button[aria-pressed="true"] small{color:#1c2733}
-  .tools2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-  .tools2 button{padding:14px 10px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:700 15px "Noto Sans JP",sans-serif;cursor:pointer}
-  .tools2 button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-  .tools2 button.danger{border-color:var(--danger);color:var(--danger)}
-  .msgbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-  .msgbox b{font-family:"Zen Maru Gothic",sans-serif;font-size:20px;display:block}
-  kbd{font:600 12px ui-monospace,monospace;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;background:var(--btn)}
-  @media (max-width:640px){ .biglv{grid-template-columns:repeat(3,1fr)} }
-  @media (prefers-reduced-motion: reduce){ *{transition:none!important} }
-  @media (max-height:520px){ #hud{gap:5px;padding-top:6px} #hud .lv button{padding:7px 0;font-size:15px} #hud .sl input{height:18px} #hud .tools button{padding:6px 0;font-size:12px} }
+  #calPanel select{font:inherit;padding:4px;border-radius:8px}
+  #calPanel .row2{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  #calPanel .row2 button{flex:1 1 100%;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.35);color:#fff;font:900 14px "Zen Maru Gothic",sans-serif}
+  #calPanel .row2 span{color:#fff;font-size:13px}
 </style>
+</head>
+<body>
 
-<!-- ホーム -->
-<section id="home" class="screen on">
-  <div class="eyebrow">大分地方気象台 お天気フェア</div>
-  <h1><span class="tag">【AR体験】</span>しん水スコープ</h1>
-  <div class="sub">〜まちの「もしも」にそなえよう！〜</div>
-  <p class="lead">大雨のとき、まちの水は下水道や用水路に流れていきます。でも、雨が強すぎて流しきれないと、道路に水があふれます。川や山から遠いまちでも起きる「内水氾濫（ないすいはんらん）」です。</p>
-  <p class="lead">スコープをのぞくと、目の前の通路にどんどん水がたまり、足もとの物が見えなくなります。どこまでなら歩ける？ いつにげる？ 体験して考えてみよう。</p>
-
-  <input type="number" id="heightIn" hidden value="150">
-  <h2>見かたをえらぶ</h2>
-  <div class="menu">
-    <button class="card" id="goScope">
-      <span class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M11 17h2"/></svg></span>
-      <span><b>タブレットで見る</b><small>手に持って通路を見る。右端の目盛りをなぞって水位を変えます。</small></span>
-    </button>
-    <button class="card" id="goMono">
-      <span class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-4l-2-2h-2l-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12" r="2.2"/></svg></span>
-      <span><b>VRゴーグルで見る</b><small>全画面・ボタンなし。水位はスタッフのPC（操作コード）またはリモコンで変えます。</small></span>
-    </button>
-    <button id="goVR" hidden></button><button id="goAR" hidden></button>
-  </div>
-
-  <details class="staff">
-    <summary>スタッフ用の設定・メモ</summary>
-    <p class="code-row">操作コード：<input type="text" id="deskCode" inputmode="numeric" maxlength="4" placeholder="4けた" style="font:700 20px 'Zen Maru Gothic',sans-serif;width:6em;padding:6px 10px;border:1px solid var(--line);border-radius:10px;letter-spacing:.15em"> <span class="note">desk.html に出る数字。入れると体験画面のボタンが隠れ、スタッフのPCから水位を変えられます。</span></p>
-    <div class="row" style="margin-top:8px">
-      <button class="chip" id="goGuide">案内役メモ（進め方・会場のつくり方）</button>
-      <button class="chip" id="goCtl">この画面内の操作卓（Claude内でのみ）</button>
-    </div>
-    <p class="note" style="margin-top:10px">センサー（ジャイロ）とカメラは、体験画面で「センサーON」を押すと使えます。iPhoneは「動作と方向」の許可が出ます。カメラ映像はどこにも送信・保存されません。</p>
-  </details>
-</section>
-
-<!-- スタッフ用メモ -->
-<section id="guide" class="screen">
-  <button class="back" data-back>← もどる</button>
-  <div class="eyebrow">案内役メモ</div>
-  <h1>1人ずつ・5分の進め方（コーン通路 1.5m×3m）</h1>
-  <p class="note"><b>ねらい：</b>佐賀（2019・2021年の豪雨）や千葉（2019年の台風・大雨）の市街地で起きたような、下水道や側溝で流しきれずに道路に水があふれる「内水氾濫」を、目の前の通路で体験する。「山や川から遠いまちでも、雨だけで足もとが見えなくなる」ことを伝える。</p>
-  <p class="note">役割：案内役（子どもの横につく）1名、操作役（PCの操作卓 desk.html）1名。体験は1人ずつ。次の子は入口の外で待つ（モニターで見学）。</p>
-  <ol>
-    <li><b>受付（30秒）</b>案内役は探り棒（先にゴムキャップ）を渡し、「棒で探ってから一歩」「片手はバーに」を約束。</li>
-    <li><b>開始（30秒）</b>案内役が端末で体験を開始（Android版は床をタップ、共通版は「コーンに合わせる」済みの端末をそのまま）。スタートマットに立って通路の奥を向かせ、子どもに渡す。「本物のコーンが見えるね。まだ水はない」。</li>
-    <li><b>水を上げて歩く（1分半）</b>操作役：<b>10</b>→<b>20</b>。浅いうちは透明で、深くなるほど泥水に変わって足もとが見えなくなる。子どもは探りながら3m歩く（ブロック19cm→ミニコーン30cm→ミニコーン45cm）。案内役はコーンの外側を並んで歩き、肩に手を添える。</li>
-    <li><b>ゴールで止まる（1分半）</b>操作役：「ゴールで止まる」→<b>30</b>（ブロックが消える）→<b>50</b>（30cmコーンが消える・泥水）→<b>70</b>（バーの高さ）。必要なら「足元を完全に隠す」で見えなさを強調。「こうなる前に逃げる」。</li>
-    <li><b>ふりかえり・交代（1分）</b>ゴーグルを外し、コーンの白テープで「さっきの水はここまで」を実物で確認。操作役は<b>次の子に交代</b>（0に戻す）。</li>
-  </ol>
-  <p class="note">開場前に一度だけ：体験端末で操作コードを入れて開始し、操作卓の「つながっている端末」が1台になることを確認。共通版（iPhone）を使う場合は「コーンに合わせる」で緑の線を本物のコーンに重ねる。</p>
-
-  <h2>水位ごとの目安（説明用）</h2>
-  <table>
-    <thead><tr><th>水位</th><th>子どもへの言葉</th><th>補足（大人向け）</th></tr></thead>
-    <tbody>
-      <tr><td><span class="lvl">10cm</span></td><td>くつの中に水が入る。まだ足もとは見える。</td><td>くるぶし程度。道路の白線や段差が見えにくくなる。車はブレーキがききにくい。</td></tr>
-      <tr><td><span class="lvl">20cm</span></td><td>足もとが見えない！ 子どもはひざ下。</td><td>まちでは、ふたが外れたマンホールや側溝への転落事故が実際に起きる深さ。傘や棒で足もとを確認。</td></tr>
-      <tr><td><span class="lvl">30cm</span></td><td>子どもはひざ上。車のエンジンが止まるかも。</td><td>マフラー・吸気口から浸水。地下への階段を流れ落ちる水は、大人でも上るのが困難とされる。</td></tr>
-      <tr><td><span class="lvl">50cm</span></td><td>おとなも歩くのがむずかしい。車がうき出す。</td><td>ひざ上。歩行避難の目安は「ひざ下まで」。車は浮いて流され、ドアも水圧で開けにくい。</td></tr>
-      <tr><td><span class="lvl">70cm</span></td><td>大人の男の人でも歩けない。外に出ないで高いところへ。</td><td>成人男性の歩行限界の目安。垂直避難（2階以上）へ切り替える。</td></tr>
-    </tbody>
-  </table>
-  <p class="note">数値は消防庁・国土交通省などが示す一般的な目安です。流れの速さや体格で変わることを添えてください。</p>
-
-  <h2>会場のつくり方（開場前・30分）</h2>
-  <div style="overflow-x:auto;margin:8px 0"><svg viewBox="0 0 520 300" width="100%" style="max-width:520px;display:block;font-family:'Noto Sans JP',sans-serif" role="img" aria-label="ブース平面図">
-    <rect x="0" y="0" width="520" height="300" fill="#f7f8f4"/>
-    <rect x="60" y="30" width="400" height="240" fill="none" stroke="#b7bfb4" stroke-dasharray="6 5"/>
-    <text x="64" y="24" font-size="11" fill="#5b6770">ブース全体 約3.5m × 4m（スタッフ・見学の余白を含む）</text>
-    <rect x="110" y="105" width="300" height="90" fill="#dfe6ee" stroke="#6f7c8a"/>
-    <text x="115" y="100" font-size="11" fill="#1c2733">通路 3.0m × 1.5m（または1.2m）ジョイントマット</text>
-    <g fill="#1f8a4c">
-      <circle cx="110" cy="105" r="7"/><circle cx="260" cy="105" r="7"/><circle cx="410" cy="105" r="7"/>
-      <circle cx="110" cy="195" r="7"/><circle cx="260" cy="195" r="7"/><circle cx="410" cy="195" r="7"/>
-    </g>
-    <g stroke="#1f8a4c" stroke-width="4"><line x1="110" y1="105" x2="410" y2="105"/><line x1="110" y1="195" x2="410" y2="195"/><line x1="410" y1="105" x2="410" y2="195"/></g>
-    <text x="118" y="212" font-size="10" fill="#146436">コーン 0m</text><text x="248" y="212" font-size="10" fill="#146436">1.5m</text><text x="398" y="212" font-size="10" fill="#146436">3m</text><text x="330" y="226" font-size="9" fill="#146436">出口側の短辺はバーで閉じる</text>
-    <rect x="112" y="135" width="26" height="30" rx="4" fill="#e8912d"/><text x="88" y="180" font-size="10" fill="#1c2733">スタートマット</text>
-    <rect x="382" y="135" width="26" height="30" rx="4" fill="#e8912d"/><text x="370" y="180" font-size="10" fill="#1c2733">ゴールマット</text>
-    <!-- 障害物：歩く向きで「左」= 図の上側 -->
-    <rect x="196" y="118" width="28" height="9" fill="#d9d9d6" stroke="#8a8a85"/><text x="160" y="114" font-size="9" fill="#5b5b55">1.0m 左寄り ブロック19cm</text>
-    <circle cx="260" cy="172" r="6" fill="#d8402f"/><text x="236" y="190" font-size="9" fill="#9c2a1f">1.5m 右寄り コーン30cm</text>
-    <circle cx="330" cy="128" r="7" fill="#d8402f"/><text x="296" y="118" font-size="9" fill="#9c2a1f">2.2m 左寄り コーン45cm</text>
-    <path d="M140 150 L 370 150" stroke="#1f6f8b" stroke-width="1.5" marker-end="url(#a)"/><defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#1f6f8b"/></marker></defs>
-    <text x="200" y="146" font-size="10" fill="#1f6f8b">歩く向き（上が左、下が右）</text>
-    <text x="110" y="240" font-size="10" fill="#5b6770">スタッフ（コーンの外側を並んで歩く）</text>
-    <text x="110" y="70" font-size="10" fill="#5b6770">見学の子ども・保護者</text>
-    <rect x="418" y="46" width="34" height="20" fill="#fff" stroke="#6f7c8a"/><text x="424" y="60" font-size="9" fill="#1c2733">PC</text><text x="330" y="82" font-size="10" fill="#5b6770">PC操作卓・モニター</text>
-  </svg></div>
-  <ol>
-    <li><b>床</b>：ジョイントマットを3m×1.5m（または1.2m）に敷く。入口側の端に「スタートマット」、奥の端に「ゴールマット」を置く（テープで印でも可）。</li>
-    <li><b>コーン</b>：左右3本ずつ、入口から0m・1.5m・3mに置き、バーでつなぐ。出口側の短辺もバーで閉じる（入口側はスタッフが立って塞ぐ）。コーンの土台に重り。床にコーンの位置をテープで印。</li>
-    <li><b>コーンの白テープ</b>：見えやすい側のコーンに10・20・30・50cmの位置で白テープを巻く。</li>
-    <li><b>障害物</b>：入口から1.0m左寄りにスチロールブロック（横立て・19cm）、1.5m右寄りにミニコーン30cm、2.2m左寄りにミニコーン45cm。位置をテープで印（共通版はずれると画面と合わない）。</li>
-    <li><b>探り棒</b>：閉じたビニール傘の先にゴムキャップかテニスボール。予備を1本。</li>
-    <li><b>体験端末</b>：充電、自動ロックをオフ、音量を上げ、このページを開く。「音」をON。共通版は「センサーON」を押して許可。</li>
-    <li><b>コーンに合わせる（共通版のみ）</b>：スタートマットに立ち、通路の奥を向いて「設定…」→「コーンに合わせる」。通路の幅（1.2／1.5）と障害物の種類を選び、「いま向いている方向をまっすぐにする」→ 緑の線が本物のコーンに重なるまで「画角の広さ」「目の高さ」「前後」を調整。合ったら閉じる（設定はその端末に保存）。Android版は開始時に足元の床をタップするだけ。</li>
-    <li><b>操作卓</b>：スタッフPCで desk.html を開くと4けたの操作コードが出る。体験端末のホームでそのコードを入れて体験を始めると、端末のボタンが隠れ、PCのボタンで水位・にごり・交代を操作できる（両方ネット接続が必要）。ネットが無い場合はBluetoothリモコンを体験端末にペアリング（PageDownで次の水位）。</li>
-    <li><b>モニター</b>：体験端末の画面をAirPlay／Chromecastでモニターに映す（見学者用）。</li>
-    <li><b>通し確認</b>：0→10→20→30→50→70→交代。水が深くなるほど濁ること、ブロック・コーンが順に見えなくなることを確認。</li>
-  </ol>
-  <p class="note">当日のチェック：端末の充電残量、コーンとテープ印のずれ、音のON、予備の探り棒、救急用の絆創膏。</p>
-
-  <h2>機材と配置</h2>
-  <p><b>通路</b>：カットコーン6本（高さ70cm）を左右3本ずつ、0m・1.5m・3mに置き、コーンバー1.5mでつなぐ（両側の長辺に2本ずつ＋出口側の短辺に1本、残り1本は予備）。床はジョイントマット。入口側とゴールに立ち位置マット。コーンの10・20・30・50cmに白テープ。</p>
-  <p><b>障害物</b>：ミニカラーコーン2つ（30cm・45cm）とスチロールブロック1つ（100×190×390mm：平置き10cm／横立て19cm／縦立て39cm）。標準は、入口から1.0m左寄りにブロック（横立て19cm）、1.5m右寄りにミニコーン30cm、2.2m左寄りにミニコーン45cm。10→30→50cmで順に見えなくなる三段階になる。Android版は登録不要で、置いた実物がそのまま沈んで見える。共通版は「コーンに合わせる」で種類と向きを選ぶ。ほかに、マットを重ねた段差、発泡棒、新聞紙を詰めたゴミ袋など柔らかいものを足してもよい。</p>
-  <p><b>ゴーグル</b>：カメラ穴のあるスマホ用の1眼ゴーグル、または筒型スコープ。かぶる型なら片手をバーに、スタッフが肩に手を添える。手持ち型なら目から離せばすぐ現実に戻れる。</p>
-  <p><b>操作</b>：スタッフPCで desk.html を開く。保険としてBluetoothプレゼンリモコンを体験端末にペアリング。音は体験端末の「音」で開場前にONにしておく。</p>
-
-  <h2>安全上の注意</h2>
-  <p>歩くのは水位10〜30cmの間だけ、距離は3m。50cm以上は立ち止まってから。障害物は柔らかい物だけ。探り棒は振り回さず床をなでる。酔いやすい子は短く、いつでも外してよいと伝える。カメラ映像はどこにも送信・保存されません。</p>
-</section>
-
-<!-- 操作卓 -->
-<section id="ctl" class="screen">
-  <button class="back" data-back>← もどる</button>
-  <div class="eyebrow">操作卓</div>
-  <h1>ゴーグルを PCから動かす</h1>
-  <p class="lead">Claude内で試すときの操作卓です。体験端末でこのページの「タブレット」「ゴーグル」を開いておくと、ここで押したボタンが反映されます。本番（GitHub Pages）では desk.html を使います。</p>
-  <div class="desk">
-    <div class="status">
-      <span><span class="dot" id="connDot"></span><span id="connText">接続を確認中…</span></span>
-      <span>つながっている体験端末：<b id="peerCount">0</b> 台</span>
-    </div>
-    <div class="msgbox"><span class="note">いま体験端末に出ている言葉</span><b id="ctlTitle">あめが ふりはじめた</b><span id="ctlSub">まだ 水は たまっていない。足もとが 見えているね</span></div>
-    <div class="biglv" id="ctlLv"></div>
-    <div class="status"><span>水位（1cm刻み）</span><input type="range" id="ctlSlider" min="0" max="70" step="1" value="0" style="flex:1;height:32px"><b id="ctlVal">0cm</b></div>
-    <div class="tools2">
-      <button id="ctlMurk">にごり：水位に連動</button>
-      <button id="ctlOpaque" aria-pressed="false">足元を完全に隠す</button>
-      <button id="ctlStation" aria-pressed="false">ゴールで止まる（向きを反転）</button>
-      <button id="ctlAuto" aria-pressed="false">▶ 自動で上げる（7秒ごと）</button>
-      <button id="ctlReset" class="danger">次の子に交代（0cmにもどす）</button>
-    </div>
-    <p class="note">キーボードでも操作できます：<kbd>1</kbd>〜<kbd>6</kbd> 水位、<kbd>M</kbd> にごり、<kbd>T</kbd> ゴール、<kbd>→</kbd>／<kbd>Space</kbd>／<kbd>PageDown</kbd> 次へ、<kbd>←</kbd>／<kbd>PageUp</kbd> 前へ、<kbd>0</kbd>／<kbd>Home</kbd> リセット、<kbd>O</kbd> 足元を隠す、<kbd>A</kbd> 自動。Bluetoothのプレゼン用リモコンをこのPCか体験端末にペアリングすれば、そのボタン（PageUp/PageDown）でも動きます。</p>
-  </div>
-</section>
-
-<!-- 体験画面 -->
 <div id="exp">
   <video id="cam" playsinline muted autoplay></video>
   <canvas id="cv"></canvas>
-  <div id="topbar">
-    <span></span>
-    <button id="remoteBadge" hidden>PCから操作中</button>
-    <button id="hudBtn">ボタンをかくす</button>
-    <button id="sensorBtn">センサーON</button>
-  </div>
-  <div id="gauge" aria-label="水位スケール">
-    <div class="cap">水の ふかさ</div>
-    <div class="track"><div class="fill" id="gFill"></div></div>
-    <div class="knob" id="gKnob">0</div>
-  </div>
-  <div id="hud">
-    <div class="lv" id="lvBtns"></div>
-    <div class="sl"><input type="range" id="lvSlider" min="0" max="70" step="1" value="0"><span id="lvVal">0cm</span></div>
-    <div class="tools">
-      <button id="stationBtn" aria-pressed="false">ゴールで止まる</button>
-      <button id="moreBtn" aria-pressed="false">設定…</button>
-    </div>
-    <div class="tools" id="more" hidden>
-      <button id="sndBtn" aria-pressed="false">音</button>
-      <button id="camBtn" aria-pressed="false">カメラ</button>
-      <button id="autoBtn" aria-pressed="false">▶ 自動</button>
-      <button id="calBtn" aria-pressed="false">コーンに合わせる</button>
-      <button id="reflBtn" aria-pressed="true">映り込み</button>
-      <button id="exitBtn">← もどる</button>
-      <button id="revealBtn" aria-pressed="false" hidden>かくれた危険を見る</button>
-      <button id="stereoBtn" aria-pressed="false" hidden>ゴーグル表示</button>
-    </div>
+</div>
     <div id="calPanel" hidden>
       <label>向き <input type="range" id="calYaw" min="-40" max="40" step="0.5" value="0"><span id="calYawV">0°</span></label>
       <label>目の高さ <input type="range" id="calEye" min="0.8" max="1.8" step="0.01" value="1.1"><span id="calEyeV">1.10m</span></label>
@@ -306,54 +40,37 @@
       <label>通路の幅 <select id="calW"><option value="1.2">1.2m</option><option value="1.5" selected>1.5m</option></select><span></span></label>
       <div class="row2"><button id="calStraight">いま向いている方向を「まっすぐ」にする</button><span style="color:#fff;font-size:12px">障害物1（1.0m左）</span><select id="calH1"><option value="cone:0.3">ミニコーン30cm</option><option value="cone:0.45">ミニコーン45cm</option><option value="brick:flat">スチロールブロック 平置き（高さ10cm）</option><option value="brick:side" selected>スチロールブロック 横立て（高さ19cm）</option><option value="brick:up">スチロールブロック 縦立て（高さ39cm）</option><option value="block:0.3">発泡ブロック30cm角</option><option value="block:0.5">発泡ブロック50cm角</option><option value="off">置かない</option></select><span style="color:#fff;font-size:12px">障害物2（1.5m右）</span><select id="calH2"><option value="cone:0.3" selected>ミニコーン30cm</option><option value="cone:0.45">ミニコーン45cm</option><option value="brick:flat">スチロールブロック 平置き（高さ10cm）</option><option value="brick:side">スチロールブロック 横立て（高さ19cm）</option><option value="brick:up">スチロールブロック 縦立て（高さ39cm）</option><option value="block:0.3">発泡ブロック30cm角</option><option value="block:0.5">発泡ブロック50cm角</option><option value="off">置かない</option></select><span style="color:#fff;font-size:12px">障害物3（2.2m左）</span><select id="calH3"><option value="cone:0.3">ミニコーン30cm</option><option value="cone:0.45" selected>ミニコーン45cm</option><option value="brick:flat">スチロールブロック 平置き（高さ10cm）</option><option value="brick:side">スチロールブロック 横立て（高さ19cm）</option><option value="brick:up">スチロールブロック 縦立て（高さ39cm）</option><option value="block:0.3">発泡ブロック30cm角</option><option value="block:0.5">発泡ブロック50cm角</option><option value="off">置かない</option></select></div>
     </div>
-  </div>
-</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="settings.js"></script>
+<script src="ui.js"></script>
 <script>
 /* =====================================================================
-   しん水スコープ / Flood Scope（共通版）  大分地方気象台 お天気フェア 内水氾濫体験
+   しん水スコープ / Flood Scope（共通版）  内水氾濫体験
    ---------------------------------------------------------------------
-   ■ 学生・スタッフが編集してよいところ（このコメントの直下の「設定」）
-     - SIMPLE : true=浸水の高さ・にごり・実物の障害物だけ（本番）。false=車・浮遊物・側溝・マンホールも出す
-     - LEVELS : 水位の段階（cm）。5 は「側溝からあふれる」段階の特別な値（SIMPLE=false のみ）
-     - MSG    : 各段階で画面に出す言葉（t=見出し, s=説明）。半角スペースで改行位置を調整
-     - WATER  : 水の色（真水／泥水）と、にごりが始まる・終わる水位
-     - COR    : 通路の寸法、コーンの高さ、障害物の位置と高さ
-   ■ それより下（描画・センサー・連動）は、動作を変えたいとき以外は触らない
-   ■ 置き場所：httpsのサーバー（GitHub Pages など）。このファイルをそのままアップロードすれば動く
-   ■ スタッフPCの操作卓は desk.html（4けたの操作コードで P2P 接続。両方ネット接続が必要）。
-     ネットが無いときは Bluetooth リモコン（PageUp/PageDown）を体験端末にペアリングして操作する
+   ■ 文言と水の数値は settings.js（Unity 版の AppText / WaterSettings の写し）で変える
+   ■ 画面の流れ（ロゴ → 説明 → 見かたをえらぶ → 床の設定 → 体験）とボタン類は ui.js
+   ■ このファイルは、カメラ映像とジャイロで見回す仮想の通路に、水を 2D キャンバスで描く部分
+     - COR : 通路の寸法、コーンの高さ、障害物の位置と高さ
+   ■ 置き場所：https のサーバー（GitHub Pages など）
    ===================================================================== */
 (() => {
   // ================= 設定（ここを編集） =================
   const SIMPLE = true;   // 浸水（高さ・にごり）と障害物だけ。車・浮遊物・側溝・マンホールは出さない
-  const LEVELS = SIMPLE ? [0, 10, 20, 30, 50, 70] : [0, 5, 10, 20, 30, 50, 70];
-  const MSG = {
-    0:  { t: 'あめが ふりはじめた', s: 'まだ 水は たまっていない。足もとが 見えているね' },
-    5:  { t: 'みぞから 水が あふれてきた！', s: '下水道が いっぱいで 流しきれない。これが 内水氾濫（ないすいはんらん）' },
-    10: { t: '水の ふかさ 10cm', s: 'くつの 中に 水が 入ってくる。まだ 足もとは 見えるね' },
-    20: { t: '水の ふかさ 20cm', s: '水が にごって、足もとが 見えにくい。子どもが 歩ける ぎりぎりの 高さ。早く にげよう！' },
-    30: { t: '水の ふかさ 30cm', s: '足もとが 見えない。子どもは 歩けない。車の エンジンも とまってしまう' },
-    50: { t: '水の ふかさ 50cm', s: 'おとなでも、女の人や お年よりは 歩けない' },
-    70: { t: '水の ふかさ 70cm', s: 'おとなの 男の人も 歩けない' },
-  };
-  // 水の色とにごり。murkFrom〜murkTo（cm）の間で真水→泥水に変わる（「水位に連動」のとき）
+  const WS = window.WATER_SETTINGS;
+  // 水の色（0〜255）。真水・泥水は settings.js、空の照り返しは Unity のシェーダーと同じ色
   const WATER = {
-    clear: [170, 162, 148],  // 真水：明るいベージュ（長ぐつの写真の色）
-    mud:   [140, 118, 90],   // 泥水：茶色（あたたかい土の色）
-    sky:   [212, 205, 192],  // 水面に映る空の照り返し（少し暖色）
-    murkFrom: 5, murkTo: 27,    // 5cmから濁りはじめ、27cmで完全な泥水（20cmで約7割）
+    clear: WS.clearColor.map(v => Math.round(v * 255)),
+    mud: WS.mudColor.map(v => Math.round(v * 255)),
+    sky: [209, 214, 222],
   };
-  // 画像素材（PNG・背景透明）。同じフォルダの img/ に置くと簡易図形の代わりに描かれる。無ければ簡易図形のまま。
-  // w: 実物の幅（m）。車は正面から見た絵、浮遊物は上からやや斜めの絵、ライト消灯/ハザードは無くてもよい
+  // 画像素材（PNG・背景透明）。同じフォルダの img/ に置くと簡易図形の代わりに描かれる（SIMPLE=false のときだけ使う）
   const IMAGES = {
     car: { file: 'img/car.png', w: 1.75 }, carStalled: { file: 'img/car_hazard.png', w: 1.75 },
     bottle: { file: 'img/bottle.png', w: 0.25 }, bag: { file: 'img/bag.png', w: 0.4 }, can: { file: 'img/can.png', w: 0.12 },
     branch: { file: 'img/branch.png', w: 0.6 }, bucket: { file: 'img/bucket.png', w: 0.3 }, foam: { file: 'img/foam.png', w: 0.38 },
   };
   const IMG = {};
-  Object.entries(IMAGES).forEach(([k, v]) => { const im = new Image(); im.onload = () => { IMG[k] = im; }; im.onerror = () => {}; im.src = v.file; });
+  if (!SIMPLE) Object.entries(IMAGES).forEach(([k, v]) => { const im = new Image(); im.onload = () => { IMG[k] = im; }; im.onerror = () => {}; im.src = v.file; });
   function drawImg(k, X, Y, ppm) {
     const im = IMG[k]; if (!im) return false;
     const w = IMAGES[k].w * ppm, h = w * im.height / im.width;
@@ -361,224 +78,18 @@
   }
   const WC = 'rgba(100,110,75,0.62)';
   const S = {
-    level: 0, auto: false, autoT: 0, reveal: false, stereo: false, cam: false,
-    eyeH: 1.1, gyro: false, q: null, dragYaw: 0, dragPitch: 0, t: 0,
-    lock: false, remote: false, epoch: 0,
+    level: 0, lvl: 0, cam: false,
+    eyeH: 1.4, gyro: false, q: null, dragYaw: 0, dragPitch: 0, t: 0,
     corridor: true, station: 0, calib: false, reflect: true, cal: { yaw: 0, fov: 66, z: 0, x: 0 }, sound: false,
-    car: null, debris: [], debrisT: 0, overflowT: 0, mhT: 0, murk: 0, murkMode: 'level', debrisOn: false, opaque: false, height: 150,
+    car: null, debris: [], debrisT: 0, overflowT: 0, mhT: 0, murk: 0, debrisOn: false, opaque: false, reveal: false,
   };
   try { const c = JSON.parse(localStorage.getItem('cal') || 'null'); if (c && typeof c.fov === 'number') S.cal = c; } catch (e) {}
   if (!S.cal.w) S.cal.w = 1.5;
+  try { const e = +localStorage.getItem('eyeH'); if (e >= 0.8 && e <= 1.8) S.eyeH = e; } catch (e) {}
 
   const $ = id => document.getElementById(id);
-
-  // 身長に合わせた言葉（ひざ≒身長の28%、腰≒52%）
-  function bodyNote(levelCm, height) {
-    if (!levelCm || levelCm === 5) return '';
-    const knee = Math.round(height * 0.28), hip = Math.round(height * 0.52);
-    let where = levelCm < knee ? 'ひざ下' : levelCm < hip ? 'ひざ上' : '腰まで';
-    return '身長' + height + 'cmのあなたなら ' + where + '（ひざ ' + knee + 'cm）';
-  }
-
-  const screens = ['home', 'guide', 'ctl'];
-  function show(id) {
-    screens.forEach(s => $(s).classList.toggle('on', s === id));
-    window.scrollTo(0, 0);
-  }
-  document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => show('home')));
-  $('goGuide').addEventListener('click', () => show('guide'));
-  $('goCtl').addEventListener('click', () => { show('ctl'); startRoom('desk'); });
-
-  function setHeight(h) {
-    h = Math.max(100, Math.min(200, Math.round(+h || 150)));
-    S.height = h; S.eyeH = Math.round(h * 0.93) / 100;
-    $('heightIn').value = h;
-    syncDesk();
-  }
-  $('heightIn').addEventListener('change', e => setHeight(e.target.value));
-  function setEye(h) { S.eyeH = h; syncDesk(); }
-  setHeight(150);
-
-
-  // ---------- スタッフの操作卓（desk.html）とつなぐ ----------
-  let deskConn = null, deskSeen = 0, deskCarSeen = 0;
-  function joinDesk(code, onState) {
-    if (!code || typeof Peer === 'undefined') return;
-    try { localStorage.setItem('deskCode', code); } catch (e) {}
-    const peer = new Peer();
-    const connect = () => {
-      const c = peer.connect('floodscope-' + code, { reliable: true });
-      c.on('open', () => { deskConn = c; onState({ connected: true }); });
-      c.on('data', d => { if (!d || typeof d.epoch !== 'number' || d.epoch < deskSeen) return; deskSeen = d.epoch; onState(d); });
-      c.on('close', () => { deskConn = null; onState({ connected: false }); setTimeout(connect, 2000); });
-      c.on('error', () => { deskConn = null; setTimeout(connect, 3000); });
-    };
-    peer.on('open', connect);
-    peer.on('disconnected', () => setTimeout(() => { try { peer.reconnect(); } catch (e) {} }, 1500));
-  }
-
-  try { const c = localStorage.getItem('deskCode'); if (c) $('deskCode').value = c; } catch (e) {}
-
-  // ---------- 体験の開始・終了 ----------
   const exp = $('exp'), cv = $('cv'), ctx = cv.getContext('2d'), cam = $('cam');
   let raf = 0, stream = null;
-
-  function enter(mode) {
-    exp.classList.add('on');
-    startRoom('goggle');
-    setLevel(0); setAuto(false);
-    S.corridor = mode !== 'vr'; S.station = 0; S.calib = false; $('calPanel').hidden = true; $('calBtn').setAttribute('aria-pressed', 'false'); $('more').hidden = true; $('moreBtn').setAttribute('aria-pressed', 'false');
-    S.dragYaw = 0; S.dragPitch = S.corridor && !S.gyro ? 0.32 : 0;
-    S.mono = mode === 'mono';
-    exp.classList.toggle('nohud', S.mono); $('hudBtn').textContent = S.mono ? 'ボタンを出す' : 'ボタンをかくす';
-    if (mode === 'vr') { stopCam(); setStereo(true); }
-    else if (mode === 'ar') { setStereo(true); startCam(); }
-    else if (mode === 'mono') { setStereo(false); startCam(); const el = document.documentElement; if (el.requestFullscreen) el.requestFullscreen().catch(() => {}); }
-    else { setStereo(false); startCam(); }
-    syncDesk();
-    resize();
-    if (!raf) loop();
-    if (!needsPermission) enableSensor(false); else if (!S.gyro) $('sensorBtn').textContent = 'センサーON';
-    const code = $('deskCode').value.trim();
-    if (code && !deskConn && !S.deskJoined) { S.deskJoined = true; joinDesk(code, d => {
-      if (d.connected === true) { exp.classList.add('nohud'); $('hudBtn').textContent = 'ボタンを出す'; S.remote = true; $('remoteBadge').hidden = false; }
-      if (typeof d.level === 'number' && d.level !== S.level) setLevel(d.level);
-      if (typeof d.reveal === 'boolean' && d.reveal !== S.reveal) setReveal(d.reveal);
-      if (typeof d.lock === 'boolean') S.lock = d.lock;
-      if (d.murk === 'auto' || d.murk === 'clear' || d.murk === 'mud' || d.murk === 'level') { if (d.murk !== S.murkMode) setMurkMode(d.murk); }
-      if (typeof d.debris === 'boolean') S.debrisOn = d.debris;
-      if (typeof d.opaque === 'boolean' && d.opaque !== S.opaque) setOpaque(d.opaque);
-      if (d.station === 0 || d.station === 1) { if (d.station !== S.station) setStation(d.station); }
-      if (typeof d.height === 'number' && d.height >= 100 && d.height <= 200) { if (d.height !== S.height) setHeight(d.height); }
-      if (typeof d.car === 'number' && d.car > deskCarSeen) { deskCarSeen = d.car; startCar(); }
-    }); }
-  }
-  function leave() {
-    snd.stop(); if (S.sound) { S.sound = false; $('sndBtn').setAttribute('aria-pressed', 'false'); }
-    exp.classList.remove('on');
-    setStereo(false); stopCam();
-    cancelAnimationFrame(raf); raf = 0;
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-  }
-  $('goScope').addEventListener('click', () => enter('scope'));
-  $('goVR').addEventListener('click', () => enter('vr'));
-  $('goAR').addEventListener('click', () => enter('ar'));
-  $('goMono').addEventListener('click', () => enter('mono'));
-  $('exitBtn').addEventListener('click', leave);
-
-  // 水位ボタン
-  const lvBtns = $('lvBtns');
-  LEVELS.forEach(l => {
-    const b = document.createElement('button');
-    b.textContent = l === 0 ? '0' : l === 5 ? 'あふれ' : l >= 100 ? (l / 100) + 'm' : l;
-    b.id = 'lv' + l;
-    b.addEventListener('click', () => { setAuto(false); setLevel(l); });
-    lvBtns.appendChild(b);
-  });
-  function stageOf(l) { let st = 0; LEVELS.forEach(x => { if (x !== 5 && x <= l) st = x; }); return st; }
-  function setLevel(l) {
-    l = Math.max(0, Math.min(70, Math.round(l)));
-    const prev = S.level;
-    S.level = l; S.autoT = 0;
-    if ($('lvSlider')) { $('lvSlider').value = l; $('lvVal').textContent = l + 'cm'; }
-    if (l === 5 && prev !== 5) S.overflowT = 0;
-    if (l >= 20 && prev < 20 && !SIMPLE) { S.mhT = S.t; if (S.sound) snd.alarm(); }
-    if (l === 0) { S.mhT = 0; S.murk = 0; S.debris.length = 0; S.car = null; if (S.sound) snd.engine(false); }
-    LEVELS.forEach(x => $('lv' + x).setAttribute('aria-pressed', String(x === l)));
-    if (typeof gaugeSync === 'function') gaugeSync();
-    syncDesk();
-  }
-  function prevLevel() { let p = 0; LEVELS.forEach(x => { if (x < S.level && x !== 5) p = x; }); setLevel(p); }
-  function nextLevel() { const n = LEVELS.find(x => x > S.level && x !== 5); if (n !== undefined) setLevel(n); }
-  function setAuto(on) { S.auto = on; S.autoT = 0; $('autoBtn').setAttribute('aria-pressed', String(on)); syncDesk(); }
-  function setReveal(on) { S.reveal = on; $('revealBtn').setAttribute('aria-pressed', String(on)); syncDesk(); }
-  $('autoBtn').addEventListener('click', () => setAuto(!S.auto));
-  $('lvSlider').addEventListener('input', e => { setAuto(false); setLevel(+e.target.value); });
-  // ---------- 縦の水位スケール（右端）：タップ／ドラッグで水位を変える ----------
-  const gauge = $('gauge'), gFill = $('gFill'), gKnob = $('gKnob');
-  const GMAX = 70;
-  LEVELS.filter(l => l !== 5).forEach(l => { const t = document.createElement('div'); t.className = 'tick'; t.style.bottom = (l / GMAX * 100) + '%'; t.innerHTML = '<span>' + l + (l ? '' : '') + '</span>'; gauge.appendChild(t); });
-  function gaugeSync() {
-    const pct = S.level / GMAX * 100;
-    gFill.style.height = pct + '%'; gKnob.style.top = (100 - pct) + '%'; gKnob.textContent = S.level;
-    const m = Math.min(1, Math.max(0, S.murk));
-    const c = [0, 1, 2].map(i => Math.round(WATER.clear[i] + (WATER.mud[i] - WATER.clear[i]) * m));
-    gFill.style.background = 'rgb(' + c.join(',') + ')';
-  }
-  function gaugeLevelFromY(clientY) {
-    const r = gauge.getBoundingClientRect();
-    let l = Math.round((1 - (clientY - r.top) / r.height) * GMAX);
-    l = Math.max(0, Math.min(GMAX, l));
-    const snap = LEVELS.find(x => x !== 5 && Math.abs(x - l) <= 3);   // 目盛りの近くは目盛りに吸いつく
-    return snap !== undefined ? snap : l;
-  }
-  let gDrag = false;
-  gauge.addEventListener('pointerdown', e => { gDrag = true; gauge.setPointerCapture(e.pointerId); gKnob.classList.add('drag'); gFill.classList.add('drag'); (l => { setAuto(false); setLevel(l); })(gaugeLevelFromY(e.clientY)); e.stopPropagation(); e.preventDefault(); });
-  gauge.addEventListener('pointermove', e => { if (gDrag) (l => { setAuto(false); setLevel(l); })(gaugeLevelFromY(e.clientY)); });
-  const gEnd = e => { gDrag = false; gKnob.classList.remove('drag'); gFill.classList.remove('drag'); };
-  gauge.addEventListener('pointerup', gEnd); gauge.addEventListener('pointercancel', gEnd);
-
-  $('revealBtn').addEventListener('click', () => setReveal(!S.reveal));
-  $('camBtn').addEventListener('click', () => S.cam ? stopCam() : startCam());
-  $('stereoBtn').addEventListener('click', () => setStereo(!S.stereo));
-  $('hudBtn').addEventListener('click', () => { const off = exp.classList.toggle('nohud'); $('hudBtn').textContent = off ? 'ボタンを出す' : 'ボタンをかくす'; });
-
-  $('stationBtn').addEventListener('click', () => setStation(S.station ? 0 : 1));
-  $('reflBtn').addEventListener('click', () => { S.reflect = !S.reflect; $('reflBtn').setAttribute('aria-pressed', String(S.reflect)); });
-  $('moreBtn').addEventListener('click', () => { const m = $('more'); m.hidden = !m.hidden; $('moreBtn').setAttribute('aria-pressed', String(!m.hidden)); });
-  const MURK_NAME = { level: '連動', clear: '真水', mud: '泥水', auto: '自動' };
-  function setMurkMode(m) { S.murkMode = m; syncDesk(); }
-  function setOpaque(on) { S.opaque = on; syncDesk(); }
-  $('sndBtn').addEventListener('click', () => { S.sound = !S.sound; $('sndBtn').setAttribute('aria-pressed', String(S.sound)); if (S.sound) snd.start(); else snd.stop(); });
-  $('calBtn').addEventListener('click', () => { S.calib = !S.calib; $('calBtn').setAttribute('aria-pressed', String(S.calib)); $('calPanel').hidden = !S.calib; if (S.calib) calSync(); });
-  function calSync() {
-    $('calYaw').value = S.cal.yaw * 180 / Math.PI; $('calYawV').textContent = (S.cal.yaw * 180 / Math.PI).toFixed(1) + '°';
-    $('calEye').value = S.eyeH; $('calEyeV').textContent = S.eyeH.toFixed(2) + 'm';
-    $('calFov').value = S.cal.fov; $('calFovV').textContent = S.cal.fov + '°';
-    $('calZ').value = S.cal.z; $('calZV').textContent = S.cal.z.toFixed(2) + 'm';
-    $('calW').value = String(S.cal.w);
-  }
-  function calSave() { try { localStorage.setItem('cal', JSON.stringify(S.cal)); } catch (e) {} }
-  $('calYaw').addEventListener('input', e => { S.cal.yaw = +e.target.value * Math.PI / 180; calSave(); calSync(); });
-  $('calEye').addEventListener('input', e => { S.eyeH = +e.target.value; calSync(); });
-  $('calFov').addEventListener('input', e => { S.cal.fov = +e.target.value; calSave(); calSync(); });
-  $('calZ').addEventListener('input', e => { S.cal.z = +e.target.value; calSave(); calSync(); });
-  function setObs(i, v) {
-    const [k, h] = v.split(':'); const cu = COR.cushions[i];
-    cu.on = v !== 'off'; if (!cu.on) return;
-    if (k === 'brick') { // スチロールブロック 100×190×390mm（コンクリートブロック型）
-      cu.kind = 'block';
-      if (h === 'flat') { cu.w = 0.39; cu.d = 0.19; cu.h = 0.10; }
-      else if (h === 'side') { cu.w = 0.39; cu.d = 0.10; cu.h = 0.19; }
-      else { cu.w = 0.19; cu.d = 0.10; cu.h = 0.39; }
-      cu.r = cu.w / 2; return;
-    }
-    cu.kind = k; cu.h = +h; cu.w = cu.d = undefined; cu.r = k === 'block' ? +h / 2 : (+h > 0.4 ? 0.12 : 0.10);
-  }
-  $('calH1').addEventListener('change', e => setObs(0, e.target.value));
-  $('calH2').addEventListener('change', e => setObs(1, e.target.value));
-  $('calW').addEventListener('change', e => { S.cal.w = +e.target.value; setCorridorWidth(S.cal.w); calSave(); });
-  $('calStraight').addEventListener('click', () => { const g = rawYaw(); S.cal.yaw = -(g - (S.station ? Math.PI : 0)) - S.dragYaw; calSave(); calSync(); });
-  $('calH3').addEventListener('change', e => setObs(2, e.target.value));
-
-  function setStereo(on) {
-    S.stereo = on;
-    exp.classList.toggle('stereo', on);
-    $('stereoBtn').setAttribute('aria-pressed', String(on));
-    if (on) {
-      const el = document.documentElement;
-      if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
-      if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
-    }
-  }
-
-  // ゴーグル表示中：タップで次の水位、長押しで0に戻す
-  let pressT = 0;
-  cv.addEventListener('pointerdown', e => { pressT = performance.now(); dragStart(e); });
-  cv.addEventListener('pointerup', e => {
-    dragEnd(e);
-    // 水位はボタン（または操作卓・リモコン）だけで変える。画面タップでは変えない
-  });
 
   // ---------- カメラ ----------
   async function startCam() {
@@ -587,28 +98,23 @@
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
       cam.srcObject = stream; cam.style.display = 'block'; S.cam = true;
     } catch (e) { S.cam = false; }
-    $('camBtn').setAttribute('aria-pressed', String(S.cam));
   }
   function stopCam() {
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
     cam.srcObject = null; cam.style.display = 'none'; S.cam = false;
-    $('camBtn').setAttribute('aria-pressed', 'false');
   }
 
   // ---------- センサー（ジャイロ） ----------
-  async function enableSensor(fromButton) {
+  // iPhone は許可が要るので、見かたを選んだボタンの中から呼ぶ
+  async function enableSensor() {
     try {
       if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         const r = await DeviceOrientationEvent.requestPermission();
-        if (r !== 'granted') { $('sensorBtn').textContent = 'センサー許可なし'; return; }
+        if (r !== 'granted') return;
       }
       window.addEventListener('deviceorientation', onOrient, true);
-      $('sensorBtn').textContent = 'センサー確認中…';
-      setTimeout(() => { $('sensorBtn').textContent = S.gyro ? 'センサー動作中' : 'センサーなし'; }, 1500);
-    } catch (e) { $('sensorBtn').textContent = 'センサー使えません'; }
+    } catch (e) {}
   }
-  $('sensorBtn').addEventListener('click', () => enableSensor(true));
-  const needsPermission = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
   // クォータニオン小道具
   const qMul = (a, b) => [
     a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[2]*b[1],
@@ -768,66 +274,23 @@
   function drawScene(c, eyeX) {
     const { vw, vh, ox } = c;
     const horizon = c.cy + c.f * Math.tan(c.pitch);
-    const lvl = S.level === 5 ? 0.05 : S.level / 100;
+    const lvl = S.lvl;
     ctx.save();
     ctx.beginPath(); ctx.rect(ox, 0, vw, vh); ctx.clip();
 
     if (S.corridor) drawCorridor(c, lvl, horizon); else drawStreet(c, lvl, horizon);
 
-    // 目の高さより水が高い＝水中
-    if (lvl >= S.eyeH) {
-      ctx.fillStyle = 'rgba(70,85,60,0.8)'; ctx.fillRect(ox, 0, vw, vh);
-      ctx.fillStyle = 'rgba(200,215,190,0.25)';
-      for (let i = 0; i < 12; i++) { const bx = ox + ((i * 131 + S.t * 30) % vw), by = vh - ((i * 97 + S.t * 90 * (1 + i % 3 * 0.4)) % (vh + 20)); ctx.beginPath(); ctx.arc(bx, by, 4 + i % 4 * 2, 0, Math.PI * 2); ctx.fill(); }
-    }
+    // 雨（水中の覆いと水位の見出しは ui.js の画面側が出す）
+    FloodUI.drawRain(ctx, ox, vw, vh, S.t);
 
-    // 雨（強い雨：本数を多く、筋を長く）
-    const RAIN_N = 70;
-    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(225,232,240,0.36)';
-    ctx.beginPath();
-    for (let i = 0; i < RAIN_N; i++) {
-      const sp = 0.8 + (i % 4) * 0.15, len = 16 + (i % 3) * 8;
-      const x = ox + ((((i * 97.3 - S.t * 160 * (0.5 + (i % 3) * 0.3)) % vw) + vw) % vw);
-      const y = ((i * 53.7 + S.t * 950 * sp) % (vh + 60)) - 30;
-      ctx.moveTo(x, y); ctx.lineTo(x - len * 0.35, y + len);
-    }
-    ctx.stroke();
-    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(235,240,246,0.35)';
-    ctx.beginPath();
-    for (let i = 0; i < 10; i++) {
-      const x = ox + ((((i * 211.7 - S.t * 200) % vw) + vw) % vw);
-      const y = ((i * 131.3 + S.t * 1300) % (vh + 80)) - 40;
-      ctx.moveTo(x, y); ctx.lineTo(x - 10, y + 30);
-    }
-    ctx.stroke();
-
-    // 文字（水位と説明）
-    const stg = S.level === 5 ? 5 : stageOf(S.level);
-    const m = { t: S.level === 0 ? MSG[0].t : S.level === 5 ? MSG[5].t : '水の ふかさ ' + S.level + 'cm', s: MSG[stg].s };
-    const fs = Math.max(13, Math.min(28, vw / 17, vh / 14));
-    ctx.font = `900 ${fs * 1.3}px "Zen Maru Gothic", "Noto Sans JP", sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    const top = 56;
-    pill(c.cx, top, m.t, fs * 1.3, '#1c2733', 'rgba(255,255,255,.92)');
-    ctx.font = `700 ${fs}px "Zen Maru Gothic", "Noto Sans JP", sans-serif`;
-    wrapPill(c, c.cx, top + fs * 2.4, m.s, fs, vw * 0.94);
-    let foot = '';
-    if (S.car && S.car.stalled && S.level < 100) foot = '水の深さ30cmで 車の エンジンが とまった';
-    else if (S.level >= 20 && S.level < 70) foot = 'かさや ぼうで 足もとを たしかめよう';
-    else if (S.level >= 70) foot = 'こうなる 前に にげよう';
-    if (foot) {
-      let fp = fs * 0.85;
-      ctx.font = `700 ${fp}px "Zen Maru Gothic", "Noto Sans JP", sans-serif`;
-      if (ctx.measureText(foot).width > vw * 0.9) { fp = fs * 0.65; ctx.font = `700 ${fp}px "Zen Maru Gothic", "Noto Sans JP", sans-serif`; }
-      const hudH = (!S.stereo && !exp.classList.contains('nohud')) ? $('hud').offsetHeight + 12 : (S.stereo ? 30 : 40);
-      pill(c.cx, vh - hudH - fs, foot, fp, '#fff', 'rgba(200,53,46,.9)');
-    }
     if (S.calib && S.corridor) {
-      ctx.font = `700 ${fs * 0.7}px "Noto Sans JP", sans-serif`;
-      pill(c.cx, top + fs * 5.2, '緑の線を 本物のコーンに重ねる', fs * 0.7, '#fff', 'rgba(31,111,139,.9)');
+      const fs = Math.max(13, Math.min(28, vw / 17, vh / 14));
+      ctx.font = `500 ${fs * 0.7}px "Zen Maru Gothic", sans-serif`;
+      pill(c.cx, 56 + fs * 5.2, "緑の線を 本物のコーンに重ねる", fs * 0.7, "#fff", "rgba(31,111,139,.9)");
     }
     ctx.restore();
   }
+
 
   // ===== 会議室の通路（AR／スコープ） =====
   function drawCorridor(c, lvl, horizon) {
@@ -986,54 +449,77 @@
   }
 
   // カメラ映像を水面の位置で上下に折り返して映り込みにする（縞ごとに少しゆらす）
-  function drawCamReflection(c, horizon) {
-    if (!S.cam || !cam.videoWidth || !S.reflect) return false;
+  // 濃さは水平線の近くほど強く（フレネル）、k 倍する。映像が無いときは空の色を映す
+  function drawCamReflection(c, horizon, k) {
     const { vw, vh, ox } = c;
-    const sc = Math.max(vw / cam.videoWidth, vh / cam.videoHeight);
-    const dw = cam.videoWidth * sc, dh = cam.videoHeight * sc, dx = ox + (vw - dw) / 2, dy = (vh - dh) / 2;
     const h0 = Math.max(0, Math.min(vh, horizon));
+    const fres = y => { const d = 1 - (y - h0) / Math.max(1, vh - h0); return Math.min(1, 0.15 + 0.6 * d * d * d); };
     ctx.save();
     ctx.beginPath(); ctx.rect(ox, h0, vw, vh - h0); ctx.clip();
+    if (!S.cam || !cam.videoWidth || !S.reflect) {
+      const sk = WATER.sky, g = ctx.createLinearGradient(0, h0, 0, vh);
+      g.addColorStop(0, `rgba(${sk[0]},${sk[1]},${sk[2]},${k * 0.75})`); g.addColorStop(1, `rgba(${sk[0]},${sk[1]},${sk[2]},${k * 0.15})`);
+      ctx.fillStyle = g; ctx.fillRect(ox, h0, vw, vh - h0);
+      ctx.restore(); return false;
+    }
+    const sc = Math.max(vw / cam.videoWidth, vh / cam.videoHeight);
+    const dw = cam.videoWidth * sc, dh = cam.videoHeight * sc, dx = ox + (vw - dw) / 2, dy = (vh - dh) / 2;
     const strip = 10;
     for (let y = h0; y < vh; y += strip) {
       const dist = (y - h0) / Math.max(1, vh - h0);
-      const wob = Math.sin(y * 0.09 + S.t * 2.2) * (2 + 6 * dist) + Math.sin(y * 0.031 - S.t * 1.3) * 3 * dist;
+      const wob = Math.sin(y * 0.09 + S.t * 2.2 * WS.waveSpeed / 0.5) * (2 + 6 * dist) * WS.waveStrength / 0.4 + Math.sin(y * 0.031 - S.t * 1.3) * 3 * dist;
       // 水面の点 y に映るのは、水平線から同じ距離だけ上の景色
       const srcY = 2 * h0 - y;                        // 画面座標（反転後）
       const sy = (srcY - dy) / dh * cam.videoHeight;  // 動画のピクセル行
       if (sy < 0 || sy >= cam.videoHeight) continue;
       const sh = strip / dh * cam.videoHeight;
+      ctx.globalAlpha = k * fres(y);
       ctx.drawImage(cam, 0, Math.max(0, sy - sh), cam.videoWidth, sh, dx + wob, y, dw, strip + 1);
     }
     ctx.restore();
     return true;
   }
+  // 水面の色（Unity の FloodWater.shader と同じ考え方）
+  //   真水：足もとの映像に水の色を掛け（clearOpacity）、映り込みを重ねる（reflectClear）
+  //   泥水：泥の色で覆う。浅いほど・mudOpacity が低いほど足もとが透ける
+  //   足もとを隠す（O キー）：泥の色で完全に覆う
   function drawWaterPlane(c, lvl, horizon, near) {
     const { vw, vh, ox } = c;
-    const reflected = S.corridor && drawCamReflection(c, horizon);
-    const wg = ctx.createLinearGradient(0, horizon, 0, vh);
-    const murk = Math.min(1, S.murk);
-    const a0 = S.opaque ? 0.97 : reflected ? 0.30 : S.corridor ? 0.42 : 0.35, a1 = S.opaque ? 1.0 : reflected ? 0.62 : S.corridor ? 0.72 : 0.6;
-    const mixc = (i, k) => Math.round(WATER.clear[i] + (WATER.mud[i] - WATER.clear[i]) * murk + k);
-    wg.addColorStop(0, `rgba(${mixc(0, 18)},${mixc(1, 18)},${mixc(2, 14)},${Math.min(0.97, a0 + 0.52 * murk)})`);
-    wg.addColorStop(1, `rgba(${mixc(0, -14)},${mixc(1, -14)},${mixc(2, -12)},${Math.min(0.98, a1 + 0.26 * murk)})`);
-    ctx.fillStyle = wg; ctx.fillRect(ox, Math.max(0, horizon), vw, vh);
-    // 水面の照り返し（真水ほど明るく光る）
-    const sk = WATER.sky;
-    const sh = ctx.createLinearGradient(0, Math.max(0, horizon), 0, Math.max(1, horizon) + vh * 0.5);
-    sh.addColorStop(0, `rgba(${sk[0]},${sk[1]},${sk[2]},${0.55 * (1 - 0.25 * murk)})`); sh.addColorStop(0.45, `rgba(${sk[0]},${sk[1]},${sk[2]},${0.18 * (1 - 0.25 * murk)})`); sh.addColorStop(1, `rgba(${sk[0]},${sk[1]},${sk[2]},0)`);
-    ctx.fillStyle = sh; ctx.fillRect(ox, Math.max(0, horizon), vw, vh * 0.5);
-    // 泥水：ゆっくり流れるにごりの帯
-    if (murk > 0.05) {
-      ctx.fillStyle = `rgba(${WATER.mud[0] + 26},${WATER.mud[1] + 24},${WATER.mud[2] + 18},${0.16 * murk})`;
+    const top = Math.max(0, horizon);
+    const murk = Math.min(1, S.murk), fc = (a, b, k) => Math.round(a + (b - a) * k);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(ox, top, vw, vh - top); ctx.clip();
+    // 真水
+    ctx.globalCompositeOperation = "multiply";
+    ctx.globalAlpha = WS.clearOpacity * 0.8;
+    ctx.fillStyle = `rgb(${WATER.clear.map(v => Math.min(255, Math.round(v * 1.15))).join(",")})`;
+    ctx.fillRect(ox, top, vw, vh - top);
+    ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+    if (S.corridor) drawCamReflection(c, horizon, FloodUI.Water.reflect * (1 - murk));
+    // 泥水
+    const show = Math.min(1, Math.max(0, (1 - murk) * 0.5 + (1 - WS.mudOpacity)));
+    const mudA = S.opaque ? 1 : murk * (1 - 0.6 * show);
+    if (mudA > 0.001) {
+      const md = WATER.mud, g = ctx.createLinearGradient(0, top, 0, vh);
+      g.addColorStop(0, `rgba(${md.map(v => Math.min(255, v + 14)).join(",")},${mudA})`);
+      g.addColorStop(1, `rgba(${md.map(v => Math.max(0, v - 10)).join(",")},${mudA})`);
+      ctx.fillStyle = g; ctx.fillRect(ox, top, vw, vh - top);
+    }
+    ctx.restore();
+    // 泥水の泡：流れに沿って伸びる筋（泥色を 35% 混ぜたベージュ）
+    const fm = S.opaque ? 1 : murk;
+    if (fm > 0.05 && WS.foamMud > 0) {
+      const md = WATER.mud;
+      ctx.fillStyle = `rgba(${fc(237, md[0], 0.35)},${fc(224, md[1], 0.35)},${fc(204, md[2], 0.35)},${WS.foamMud * 0.35 * fm})`;
       for (let i = 0; i < 7; i++) {
         const z = -0.3 + i * 0.55 + 0.08 * Math.sin(i * 2.3 + S.t * 0.4);
-        const pts = []; for (let k = 0; k <= 12; k++) { const x = 2.8 - 5.6 * k / 12; pts.push([x, lvl + 0.001, z + 0.06 * Math.sin(x * 3 + S.t * 1.1 + i)]); }
-        for (let k = 12; k >= 0; k--) { const x = 2.8 - 5.6 * k / 12; pts.push([x, lvl + 0.001, z + 0.16 + 0.05 * Math.sin(x * 2.5 - S.t * 0.9 + i)]); }
+        const fl = S.t * WS.flowSpeed * 2.75;
+        const pts = []; for (let k = 0; k <= 12; k++) { const x = 2.8 - 5.6 * k / 12; pts.push([x, lvl + 0.001, z + 0.06 * Math.sin(x * 3 + fl + i)]); }
+        for (let k = 12; k >= 0; k--) { const x = 2.8 - 5.6 * k / 12; pts.push([x, lvl + 0.001, z + 0.16 + 0.05 * Math.sin(x * 2.5 - fl * 0.8 + i)]); }
         poly3(c, pts, ctx.fillStyle);
       }
     }
-    ctx.strokeStyle = `rgba(235,240,225,${0.26 - 0.12 * murk})`; ctx.lineWidth = 1.2;
+    ctx.strokeStyle = `rgba(235,240,225,${(0.26 - 0.12 * murk) * WS.waveStrength / 0.4})`; ctx.lineWidth = 1.2;
     if (S.corridor) {
       // 右→左の流れ：横の波線。波の山が左へ進む
       for (let i = 0; i < 12; i++) {
@@ -1208,7 +694,7 @@
     });
   }
   function updateDebris(dt) {
-    const lvl = S.level === 5 ? 0.05 : S.level / 100;
+    const lvl = S.lvl;
     if (lvl >= 0.1 && lvl < S.eyeH && S.debrisOn) {
       S.debrisT += dt;
       if (S.debrisT > (S.corridor ? 1.6 : 2.2) && S.debris.length < 10) { S.debrisT = 0; spawnDebris(); }
@@ -1243,7 +729,7 @@
   function startCar() { if (SIMPLE) return; S.car = { t0: S.t, stalled: false, stallT: 0, floatT: 0 }; if (S.sound) snd.engine(true); }
   function updateCar(dt) {
     if (!S.car) return;
-    const lvl = S.level === 5 ? 0.05 : S.level / 100;
+    const lvl = S.lvl;
     const age = S.t - S.car.t0;
     const startZ = S.corridor ? 14 : 45, stopZ = S.corridor ? 3.2 : 5.0, endZ = S.corridor ? -6 : -3;
     // 30cm未満：水しぶきを上げて通り過ぎる。30cm以上：止まる位置で止まる
@@ -1335,7 +821,7 @@
   function label3(c, x, y, z, text, hm, fg, bg) {
     const p = c.P(x, y, z); if (p.z < 0.1) return;
     const px = Math.max(9, c.f * hm / p.z);
-    ctx.font = `700 ${px}px "Zen Maru Gothic", "Noto Sans JP", sans-serif`;
+    ctx.font = `900 ${px}px "Zen Maru Gothic", sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const w = ctx.measureText(text).width + px;
     ctx.fillStyle = bg; rr(p.x - w / 2, p.y - px * 0.75, w, px * 1.5, px * 0.4); ctx.fill();
@@ -1369,7 +855,7 @@
     for (let h = 10; h <= 100; h += 10) {
       const y = base.y - h / 100 * ppm; const big = h % 50 === 0 || h === 10 || h === 20 || h === 30 || h === 70;
       ctx.beginPath(); ctx.moveTo(base.x - w / 2, y); ctx.lineTo(base.x - w / 2 + (big ? w : w * 0.5), y); ctx.stroke();
-      if (big) { ctx.font = `700 ${Math.max(8, ppm * 0.075)}px "Noto Sans JP", sans-serif`; ctx.fillStyle = '#1c2733'; ctx.fillText(h + '', base.x + w * 0.7, y); }
+      if (big) { ctx.font = `900 ${Math.max(8, ppm * 0.075)}px "Zen Maru Gothic", sans-serif`; ctx.fillStyle = '#1c2733'; ctx.fillText(h + '', base.x + w * 0.7, y); }
     }
     // 現在の水位マーク
     if (S.level > 0) {
@@ -1405,110 +891,71 @@
       // ひざ線
       ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
       ctx.beginPath(); ctx.moveTo(X - 0.3 * ppm, Y - hip * 0.55 * ppm); ctx.lineTo(X + 0.3 * ppm, Y - hip * 0.55 * ppm); ctx.stroke(); ctx.setLineDash([]);
-      ctx.font = `700 ${Math.max(8, ppm * 0.09)}px "Noto Sans JP", sans-serif`; ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.font = `900 ${Math.max(8, ppm * 0.09)}px "Zen Maru Gothic", sans-serif`; ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.fillText('ひざ', X + 0.32 * ppm, Y - hip * 0.55 * ppm);
     }
     // 名前と身長
     if (!fg.name) return;
-    ctx.font = `700 ${Math.max(9, ppm * 0.11)}px "Zen Maru Gothic", "Noto Sans JP", sans-serif`;
+    ctx.font = `900 ${Math.max(9, ppm * 0.11)}px "Zen Maru Gothic", sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     const ty = Y - (fg.h + 0.25) * ppm, tw = ctx.measureText(fg.name).width + ppm * 0.12;
     ctx.fillStyle = 'rgba(255,255,255,.85)'; rr(X - tw / 2, ty - ppm * 0.15, tw, ppm * 0.17, ppm * 0.05); ctx.fill();
     ctx.fillStyle = '#1c2733'; ctx.fillText(fg.name, X, ty);
   }
 
-  // ---------- 操作卓と端末連動 ----------
-  const ctlLv = $('ctlLv');
-  LEVELS.forEach(l => {
-    const b = document.createElement('button');
-    b.id = 'ctl' + l; b.innerHTML = (l === 5 ? 'あふれ' : l >= 100 ? (l / 100) : l) + '<small>' + (l === 0 ? 'なし' : l === 5 ? '側溝から' : l >= 100 ? 'm' : 'cm') + '</small>';
-    b.addEventListener('click', () => { setAuto(false); setLevel(l); broadcast(); });
-    ctlLv.appendChild(b);
-  });
-  $('ctlAuto').addEventListener('click', () => { setAuto(!S.auto); broadcast(); });
-  $('ctlSlider').addEventListener('input', e => { setAuto(false); setLevel(+e.target.value); broadcast(); });
-  $('ctlReset').addEventListener('click', () => { setAuto(false); setReveal(false); setStation(0); setOpaque(false); setLevel(0); broadcast(); });
-  $('ctlStation').addEventListener('click', () => { setStation(S.station ? 0 : 1); broadcast(); });
-  $('ctlMurk').addEventListener('click', () => { setMurkMode(S.murkMode === 'level' ? 'clear' : S.murkMode === 'clear' ? 'mud' : 'level'); broadcast(); });
-  $('ctlOpaque').addEventListener('click', () => { setOpaque(!S.opaque); broadcast(); });
-  function setStation(n) { S.station = n; $('stationBtn').setAttribute('aria-pressed', String(n === 1)); syncDesk(); }
-  function syncDesk() {
-    if ($('ctlSlider')) { $('ctlSlider').value = S.level; $('ctlVal').textContent = S.level + 'cm'; }
-    LEVELS.forEach(x => { const b = $('ctl' + x); if (b) b.setAttribute('aria-pressed', String(x === S.level)); });
-    $('ctlAuto').setAttribute('aria-pressed', String(S.auto));
-    $('ctlStation').setAttribute('aria-pressed', String(S.station === 1));
-    $('ctlMurk').textContent = 'にごり：' + ({ level: '水位に連動', clear: '真水で固定', mud: '泥水で固定', auto: '自動' })[S.murkMode];
-    $('ctlOpaque').setAttribute('aria-pressed', String(S.opaque));
-    { const stg = S.level === 5 ? 5 : stageOf(S.level); $('ctlTitle').textContent = S.level === 0 ? MSG[0].t : S.level === 5 ? MSG[5].t : '水の ふかさ ' + S.level + 'cm'; $('ctlSub').textContent = MSG[stg].s; }
+  // ---------- 係員用：通路と障害物の位置合わせ（リモコンの K で開閉） ----------
+  function setCalib(on) { S.calib = on; $('calPanel').hidden = !on; if (on) calSync(); }
+  function calSync() {
+    $('calYaw').value = S.cal.yaw * 180 / Math.PI; $('calYawV').textContent = (S.cal.yaw * 180 / Math.PI).toFixed(1) + '°';
+    $('calEye').value = S.eyeH; $('calEyeV').textContent = S.eyeH.toFixed(2) + 'm';
+    $('calFov').value = S.cal.fov; $('calFovV').textContent = S.cal.fov + '°';
+    $('calZ').value = S.cal.z; $('calZV').textContent = S.cal.z.toFixed(2) + 'm';
+    $('calW').value = String(S.cal.w);
   }
-  syncDesk();
+  function calSave() { try { localStorage.setItem('cal', JSON.stringify(S.cal)); localStorage.setItem('eyeH', String(S.eyeH)); } catch (e) {} }
+  $('calYaw').addEventListener('input', e => { S.cal.yaw = +e.target.value * Math.PI / 180; calSave(); calSync(); });
+  $('calEye').addEventListener('input', e => { S.eyeH = +e.target.value; calSave(); calSync(); });
+  $('calFov').addEventListener('input', e => { S.cal.fov = +e.target.value; calSave(); calSync(); });
+  $('calZ').addEventListener('input', e => { S.cal.z = +e.target.value; calSave(); calSync(); });
+  function setObs(i, v) {
+    const [k, h] = v.split(':'); const cu = COR.cushions[i];
+    cu.on = v !== 'off'; if (!cu.on) return;
+    if (k === 'brick') { // スチロールブロック 100×190×390mm（コンクリートブロック型）
+      cu.kind = 'block';
+      if (h === 'flat') { cu.w = 0.39; cu.d = 0.19; cu.h = 0.10; }
+      else if (h === 'side') { cu.w = 0.39; cu.d = 0.10; cu.h = 0.19; }
+      else { cu.w = 0.19; cu.d = 0.10; cu.h = 0.39; }
+      cu.r = cu.w / 2; return;
+    }
+    cu.kind = k; cu.h = +h; cu.w = cu.d = undefined; cu.r = k === 'block' ? +h / 2 : (+h > 0.4 ? 0.12 : 0.10);
+  }
+  $('calH1').addEventListener('change', e => setObs(0, e.target.value));
+  $('calH2').addEventListener('change', e => setObs(1, e.target.value));
+  $('calH3').addEventListener('change', e => setObs(2, e.target.value));
+  $('calW').addEventListener('change', e => { S.cal.w = +e.target.value; setCorridorWidth(S.cal.w); calSave(); });
+  $('calStraight').addEventListener('click', () => { S.cal.yaw = -rawYaw() - S.dragYaw; calSave(); calSync(); });
 
-  // キーボード／Bluetoothリモコン（PageUp/PageDown 型）
-  window.addEventListener('keydown', e => {
-    const inDesk = $('ctl').classList.contains('on'), inExp = exp.classList.contains('on');
-    if (!inDesk && !inExp) return;
-    if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
-    const k = e.key;
-    let hit = true;
-    if (k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'Enter') { setAuto(false); nextLevel(); }
-    else if (k === 'ArrowLeft' || k === 'PageUp') { setAuto(false); prevLevel(); }
-    else if (k === 'Home' || k === '0') { setAuto(false); setReveal(false); setLevel(0); }
-    else if (k >= '1' && k <= '6') { setAuto(false); setLevel(LEVELS[+k - 1]); }
-    else if (k === 'm' || k === 'M') $('ctlMurk').click();
-    else if (k === 't' || k === 'T') setStation(S.station ? 0 : 1);
-    else if (k === 'o' || k === 'O') setOpaque(!S.opaque);
-    else if (k === 'a' || k === 'A') setAuto(!S.auto);
-    else hit = false;
-    if (hit) { e.preventDefault(); broadcast(); }
+  // ---------- 床の設定（FloorPlacer）：タップした向きを通路の「まっすぐ」にして、そこを水位0の基準にする ----------
+  cv.addEventListener('pointerdown', e => dragStart(e));
+  cv.addEventListener('pointerup', e => {
+    dragEnd(e);
+    if (!FloodUI.placed && !dragged) { S.cal.yaw = -rawYaw() - S.dragYaw; calSave(); if (S.calib) calSync(); FloodUI.setPlaced(true); }
   });
 
-  // 端末どうしの連動（同じページを開いている端末に届く）
-  let room = null, role = null, roomTried = false, lastRemoteEpoch = 0, resendTimer = 0;
-  async function startRoom(r) {
-    role = r;
-    if (roomTried) { if (role === 'goggle' && room) room.presence({ role: 'goggle' }); return; }
-    roomTried = true;
-    try { room = window.claude && window.claude.use ? await window.claude.use('room') : null; } catch (e) { room = null; }
-    if (!room) { $('connText').textContent = '連動は使えません（この開き方では端末をつなげません）'; return; }
-    room.onConnection(on => {
-      $('connDot').classList.toggle('on', on);
-      $('connText').textContent = on ? '連動 ON' : '接続待ち…';
-    });
-    room.onPeers(ch => {
-      const n = room.peers().filter(p => !p.isMe && p.presence && p.presence.role === 'goggle').length
-        + room.peers().filter(p => p.isMe && !p.sameTab && p.presence && p.presence.role === 'goggle').length;
-      $('peerCount').textContent = n;
-      if (role === 'desk' && ch.joined.some(p => !p.sameTab)) broadcast();
-    });
-    room.on('ctl', m => {
-      if (m.sameTab || role === 'desk') return;
-      const d = m.data || {};
-      if (typeof d.epoch !== 'number' || d.epoch < lastRemoteEpoch) return;
-      lastRemoteEpoch = d.epoch;
-      if (typeof d.level === 'number' && d.level !== S.level) setLevel(d.level);
-      if (typeof d.auto === 'boolean' && d.auto !== S.auto) setAuto(d.auto);
-      if (typeof d.reveal === 'boolean' && d.reveal !== S.reveal) setReveal(d.reveal);
-      if (typeof d.lock === 'boolean') S.lock = d.lock;
-      if (typeof d.height === 'number' && d.height >= 100 && d.height <= 200) { if (d.height !== S.height) setHeight(d.height); }
-      if (d.station === 0 || d.station === 1) { if (d.station !== S.station) setStation(d.station); }
-      if (d.murk === 'auto' || d.murk === 'clear' || d.murk === 'mud' || d.murk === 'level') { if (d.murk !== S.murkMode) setMurkMode(d.murk); }
-      if (typeof d.opaque === 'boolean' && d.opaque !== S.opaque) setOpaque(d.opaque);
-      if (typeof d.car === 'number' && d.car > (S.carSeen || 0)) { S.carSeen = d.car; startCar(); }
-      S.remote = true; $('remoteBadge').hidden = false;
-    });
-    room.presence({ role: role });
-    if (role === 'desk') { broadcast(); resendTimer = setInterval(() => { if ($('ctl').classList.contains('on')) broadcast(); }, 4000); }
+  // ---------- 体験の開始・終了 ----------
+  function enter() {
+    exp.classList.add('on');
+    S.dragYaw = 0; S.dragPitch = S.gyro ? 0 : 0.32;
+    enableSensor();
+    startCam();
+    resize();
+    if (!raf) { last = performance.now(); loop(); }
   }
-  // 操作卓側の自動送り（体験端末は操作卓に従う）
-  setInterval(() => {
-    if (role !== 'desk' || !S.auto || !$('ctl').classList.contains('on')) return;
-    S.autoT += 1;
-    if (S.autoT >= 7) { const n = LEVELS.find(x => x > S.level && x !== 5); if (n !== undefined) setLevel(n); else setAuto(false); broadcast(); }
-  }, 1000);
-  function broadcast() {
-    if (!room || role !== 'desk') return;
-    S.epoch = Date.now();
-    room.emit('ctl', { level: S.level, auto: S.auto, reveal: S.reveal, lock: S.lock, height: S.height, station: S.station, car: S.carEpoch || 0, murk: S.murkMode, opaque: S.opaque, epoch: S.epoch }).catch(() => {});
+  function leave() {
+    exp.classList.remove('on');
+    setCalib(false);
+    stopCam();
+    cancelAnimationFrame(raf); raf = 0;
   }
 
   // ---------- ループ ----------
@@ -1517,30 +964,28 @@
     raf = requestAnimationFrame(loop);
     now = now || performance.now();
     const dt = Math.min(0.1, (now - last) / 1000); last = now; S.t += dt;
-    if (S.auto && !S.remote && role !== 'desk') { S.autoT += dt; if (S.autoT > 7) { const n = LEVELS.find(x => x > S.level && x !== 5); if (n !== undefined) setLevel(n); else setAuto(false); } }
+    FloodUI.tick(dt);
+    // 水の状態は ui.js の Water から受け取る（表示上の水位はなめらかに動く）
+    const Wt = FloodUI.Water;
+    S.level = Wt.levelCm; S.murk = Wt.murk; S.opaque = Wt.opaque;
+    S.lvl = FloodUI.placed && Wt.shownLevel > 0.2 ? Math.max(0, (Wt.shownLevel + Wt.floorOffsetCm) / 100) : 0;
+    FloodUI.setUnderwater(S.lvl >= S.eyeH);             // 目の高さより水が高い＝水中
+    updateDebris(dt); updateCar(dt);
     if (!W || !H) resize();
-    if (S.level === 5) S.overflowT += dt;
-    if (S.murkMode === 'level') { const t = Math.max(0, Math.min(1, (S.level - WATER.murkFrom) / (WATER.murkTo - WATER.murkFrom))); S.murk += (t - S.murk) * Math.min(1, dt * 1.5); }
-    else if (S.murkMode === 'clear') S.murk = Math.max(0, S.murk - dt); else if (S.murkMode === 'mud') S.murk = Math.min(1, S.murk + dt); else if (S.level >= 10) S.murk = Math.min(1, S.murk + dt / 20); else if (S.level === 0) S.murk = 0;
-    updateDebris(dt); updateCar(dt); if (S.sound) snd.update(dt);
-    if ((S.t * 10 | 0) % 3 === 0) gaugeSync();
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, W, H);
     const { yaw, pitch } = viewAngles();
-    if (S.stereo) {
-      const half = W / 2;
-      const fv = S.corridor ? S.cal.fov * Math.PI / 180 : 1.55;
-      drawScene(makeCamera(yaw, pitch, -0.032, half, H, 0, fv), -0.032);
-      drawScene(makeCamera(yaw, pitch, 0.032, half, H, half, fv), 0.032);
-      ctx.fillStyle = '#000'; ctx.fillRect(half - 2, 0, 4, H);
-    } else {
-      drawScene(makeCamera(yaw, pitch, 0, W, H, 0, S.corridor ? S.cal.fov * Math.PI / 180 : 1.25), 0);
-    }
+    drawScene(makeCamera(yaw, pitch, 0, W, H, 0, S.cal.fov * Math.PI / 180), 0);
   }
-  document.fonts && document.fonts.load('900 20px "Zen Maru Gothic"').catch(() => {});
+
+  FloodUI.start({
+    fullscreen: true,
+    onEnter: enter,
+    onFinish: leave,
+    onKey: k => { if (k === 'k' || k === 'K') { setCalib(!S.calib); return true; } return false; },
+  });
 })();
 </script>
-
 
 </body>
 </html>
